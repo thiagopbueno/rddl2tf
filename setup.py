@@ -41,6 +41,7 @@ setup(
     scripts=[],
     install_requires=[
         'pyrddl',
+        'rddlgym',
         'tensorflow',
         'tensorflow-tensorboard',
         'typing'
