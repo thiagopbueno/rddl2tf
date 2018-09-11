@@ -2,6 +2,6 @@ language: python
 python:
   - "3.6"
 install:
-  - pip install -r requirements.txt
+  - pip3 install rddl2tf
 scripts:
   - python3 -m unittest -v tests/*.py
