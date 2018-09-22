@@ -547,7 +547,10 @@ class TensorFluent(object):
         Returns:
             A TensorFluent wrapping the sum aggregation function.
         '''
-        return self._aggregation_op(tf.reduce_sum, self, vars_list)
+        operand = self
+        if operand.dtype == tf.bool:
+            operand = operand.cast(tf.float32)
+        return self._aggregation_op(tf.reduce_sum, operand, vars_list)
 
     def avg(self, vars_list: List[str]) -> 'TensorFluent':
         '''Returns the TensorFluent for the avg aggregation function.
@@ -558,7 +561,24 @@ class TensorFluent(object):
         Returns:
             A TensorFluent wrapping the avg aggregation function.
         '''
-        return self._aggregation_op(tf.reduce_mean, self, vars_list)
+        operand = self
+        if operand.dtype == tf.bool:
+            operand = operand.cast(tf.float32)
+        return self._aggregation_op(tf.reduce_mean, operand, vars_list)
+
+    def prod(self, vars_list: List[str]) -> 'TensorFluent':
+        '''Returns the TensorFluent for the prod aggregation function.
+
+        Args:
+            vars_list: The list of variables to be aggregated over.
+
+        Returns:
+            A TensorFluent wrapping the prod aggregation function.
+        '''
+        operand = self
+        if operand.dtype == tf.bool:
+            operand = operand.cast(tf.float32)
+        return self._aggregation_op(tf.reduce_prod, operand, vars_list)
 
     def maximum(self, vars_list: List[str]) -> 'TensorFluent':
         '''Returns the TensorFluent for the maximum aggregation function.
@@ -581,17 +601,6 @@ class TensorFluent(object):
             A TensorFluent wrapping the minimum aggregation function.
         '''
         return self._aggregation_op(tf.reduce_min, self, vars_list)
-
-    def prod(self, vars_list: List[str]) -> 'TensorFluent':
-        '''Returns the TensorFluent for the prod aggregation function.
-
-        Args:
-            vars_list: The list of variables to be aggregated over.
-
-        Returns:
-            A TensorFluent wrapping the prod aggregation function.
-        '''
-        return self._aggregation_op(tf.reduce_prod, self, vars_list)
 
     def forall(self, vars_list: List[str]) -> 'TensorFluent':
         '''Returns the TensorFluent for the forall aggregation function.
