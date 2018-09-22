@@ -782,8 +782,11 @@ class Compiler(object):
         '''Returns the non-fluents instantiated.'''
         non_fluents = self.rddl.domain.non_fluents
         initializer = self.rddl.non_fluents.init_non_fluent
-        self._non_fluents = self._instantiate_pvariables(non_fluents, self.non_fluent_ordering, initializer)
-        return self._non_fluents
+        with self.graph.as_default():
+            with tf.name_scope('non_fluents'):
+                self._non_fluents = self._instantiate_pvariables(
+                    non_fluents, self.non_fluent_ordering, initializer)
+                return self._non_fluents
 
     def _instantiate_initial_state_fluents(self):
         '''Returns the initial state-fluents instantiated.'''
