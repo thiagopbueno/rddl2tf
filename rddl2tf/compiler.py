@@ -129,11 +129,17 @@ class Compiler(object):
             A list of intermediate fluent CPFs compiled to :obj:`rddl2tf.fluent.TensorFluent`.
         '''
         interm_fluents = []
-        for cpf in self.rddl.domain.intermediate_cpfs:
-            t = self._compile_expression(cpf.expr, scope, batch_size)
-            interm_fluents.append((cpf.name, t))
-            scope[cpf.name] = t
-        return interm_fluents
+        with self.graph.as_default():
+            with tf.name_scope('intermediate_cpfs'):
+                for cpf in self.rddl.domain.intermediate_cpfs:
+                    name_scope = cpf.name
+                    name_scope = name_scope.replace('/', '-')
+                    name_scope = name_scope.replace("'", '')
+                    with tf.name_scope(name_scope):
+                        t = self._compile_expression(cpf.expr, scope, batch_size)
+                    interm_fluents.append((cpf.name, t))
+                    scope[cpf.name] = t
+                return interm_fluents
 
     def compile_state_cpfs(self,
             scope: Dict[str, TensorFluent],
@@ -148,12 +154,18 @@ class Compiler(object):
             A list of state fluent CPFs compiled to :obj:`rddl2tf.fluent.TensorFluent`.
         '''
         next_state_fluents = []
-        for cpf in self.rddl.domain.state_cpfs:
-            t = self._compile_expression(cpf.expr, scope, batch_size)
-            next_state_fluents.append((cpf.name, t))
-        key = lambda f: self.next_state_fluent_ordering.index(f[0])
-        next_state_fluents = sorted(next_state_fluents, key=key)
-        return next_state_fluents
+        with self.graph.as_default():
+            with tf.name_scope('state_cpfs'):
+                for cpf in self.rddl.domain.state_cpfs:
+                    name_scope = cpf.name
+                    name_scope = name_scope.replace('/', '-')
+                    name_scope = name_scope.replace("'", '')
+                    with tf.name_scope(name_scope):
+                        t = self._compile_expression(cpf.expr, scope, batch_size)
+                    next_state_fluents.append((cpf.name, t))
+                key = lambda f: self.next_state_fluent_ordering.index(f[0])
+                next_state_fluents = sorted(next_state_fluents, key=key)
+                return next_state_fluents
 
     def compile_reward(self, scope: Dict[str, TensorFluent]) -> TensorFluent:
         '''Compiles the reward function given the fluent `scope`.
