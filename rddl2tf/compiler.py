@@ -193,14 +193,16 @@ class Compiler(object):
         '''
         scope = self.action_precondition_scope(state, action)
         preconds = []
-        for p in self.action_preconditions:
-            t = self._compile_expression(p, scope)
-            tensor = t.tensor
-            if t.shape.fluent_shape == ():
-                tensor = tf.expand_dims(tensor, -1)
-            fluent = TensorFluent(tensor, t.scope[:], t.batch)
-            preconds.append(fluent)
-        return preconds
+        with self.graph.as_default():
+            with tf.name_scope('action_preconditions'):
+                for p in self.action_preconditions:
+                    t = self._compile_expression(p, scope)
+                    tensor = t.tensor
+                    if t.shape.fluent_shape == ():
+                        tensor = tf.expand_dims(tensor, -1)
+                    fluent = TensorFluent(tensor, t.scope[:], t.batch)
+                    preconds.append(fluent)
+                return preconds
 
     def compile_action_preconditions_checking(self,
             state: Sequence[tf.Tensor],
@@ -236,22 +238,27 @@ class Compiler(object):
         lower_bounds = self.action_lower_bound_constraints
         upper_bounds = self.action_upper_bound_constraints
 
-        bounds = {}
-        for name in self.action_fluent_ordering:
+        with self.graph.as_default():
+            with tf.name_scope('action_bound_constraints'):
 
-            lower_expr = lower_bounds.get(name)
-            lower = None
-            if lower_expr is not None:
-                lower = self._compile_expression(lower_expr, scope)
+                bounds = {}
+                for name in self.action_fluent_ordering:
 
-            upper_expr = upper_bounds.get(name)
-            upper = None
-            if upper_expr is not None:
-                upper = self._compile_expression(upper_expr, scope)
+                    lower_expr = lower_bounds.get(name)
+                    lower = None
+                    if lower_expr is not None:
+                        with tf.name_scope('lower_bound'):
+                            lower = self._compile_expression(lower_expr, scope)
 
-            bounds[name] = (lower, upper)
+                    upper_expr = upper_bounds.get(name)
+                    upper = None
+                    if upper_expr is not None:
+                        with tf.name_scope('upper_bound'):
+                            upper = self._compile_expression(upper_expr, scope)
 
-        return bounds
+                    bounds[name] = (lower, upper)
+
+                return bounds
 
     def non_fluents_scope(self) -> Dict[str, TensorFluent]:
         '''Returns a partial scope with non-fluents.'''
