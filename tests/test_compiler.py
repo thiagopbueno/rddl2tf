@@ -94,6 +94,21 @@ class TestCompiler(unittest.TestCase):
                 self.assertTrue(p.shape.batch)
                 self.assertTupleEqual(p.shape.fluent_shape, (1,))
 
+    def test_compile_state_invariants(self):
+        batch_size = 1000
+        compilers = [self.compiler1, self.compiler2]
+        expected_invariants = [2, 0]
+        for compiler, expected in zip(compilers, expected_invariants):
+            compiler.batch_mode_on()
+            state = compiler.compile_initial_state(batch_size)
+            invariants = compiler.compile_state_invariants(state)
+            self.assertIsInstance(invariants, list)
+            self.assertEqual(len(invariants), expected)
+            for p in invariants:
+                self.assertIsInstance(p, TensorFluent)
+                self.assertEqual(p.dtype, tf.bool)
+                self.assertTupleEqual(p.shape.fluent_shape, (1,))
+
     def test_compile_action_preconditions_checking(self):
         batch_size = 1000
         compilers = [self.compiler1, self.compiler2]

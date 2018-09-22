@@ -204,6 +204,29 @@ class Compiler(object):
                     preconds.append(fluent)
                 return preconds
 
+    def compile_state_invariants(self,
+            state: Sequence[tf.Tensor]) -> List[TensorFluent]:
+        '''Compiles the state invarints given current `state` fluents.
+
+        Args:
+            state (Sequence[tf.Tensor]): The current state fluents.
+
+        Returns:
+            A list of :obj:`rddl2tf.fluent.TensorFluent`.
+        '''
+        scope = self.state_invariant_scope(state)
+        invariants = []
+        with self.graph.as_default():
+            with tf.name_scope('state_invariants'):
+                for p in self.state_invariants:
+                    t = self._compile_expression(p, scope)
+                    tensor = t.tensor
+                    if t.shape.fluent_shape == ():
+                        tensor = tf.expand_dims(tensor, -1)
+                    fluent = TensorFluent(tensor, t.scope[:], t.batch)
+                    invariants.append(fluent)
+                return invariants
+
     def compile_action_preconditions_checking(self,
             state: Sequence[tf.Tensor],
             action: Sequence[tf.Tensor]) -> tf.Tensor:
@@ -316,6 +339,20 @@ class Compiler(object):
         scope.update(self.action_scope(action))
         return scope
 
+    def state_invariant_scope(self, state: Sequence[tf.Tensor]):
+        '''Returns the state invariant fluent scope for the current `state`.
+
+        Args:
+            state (Sequence[tf.Tensor]): The current state fluents.
+
+        Returns:
+            A mapping from fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+        '''
+        scope = {}
+        scope.update(self.non_fluents_scope())
+        scope.update(self.state_scope(state))
+        return scope
+
     def action_precondition_scope(self,
             state: Sequence[tf.Tensor],
             action: Optional[Sequence[tf.Tensor]] = None) -> Dict[str, TensorFluent]:
@@ -408,6 +445,14 @@ class Compiler(object):
         if self.__dict__.get('_global_action_preconditions') is None:
             self._build_preconditions_table()
         return self._global_action_preconditions
+
+    @property
+    def state_invariants(self) -> Dict[str, List[Expression]]:
+        '''The state invariant expressions.
+
+        Returns:
+            Dict[str, List[Expression]]: A mapping from fluent name to a list of Expressions.'''
+        return self.rddl.domain.invariants
 
     @property
     def action_lower_bound_constraints(self) -> Dict[str, Expression]:
