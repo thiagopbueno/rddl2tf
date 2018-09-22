@@ -968,7 +968,7 @@ class Compiler(object):
                     false_case = self._compile_expression(args[2], scope)
                     return TensorFluent.if_then_else(condition, true_case, false_case)
             elif etype[0] == 'aggregation':
-                if etype[1] not in ['sum', 'prod', 'exists', 'forall']:
+                if etype[1] not in ['sum', 'prod', 'avg', 'maximum', 'minimum', 'exists', 'forall']:
                     raise ValueError('Unkown aggregation function {}.'.format(etype[1]))
                 typed_var_list = args[:-1]
                 vars_list = [var for _, (var, _) in typed_var_list]
@@ -982,6 +982,8 @@ class Compiler(object):
                     return x.avg(vars_list=vars_list)
                 elif etype[1] == 'maximum':
                     return x.maximum(vars_list=vars_list)
+                elif etype[1] == 'minimum':
+                    return x.minimum(vars_list=vars_list)
                 elif etype[1] == 'exists':
                     return x.exists(vars_list=vars_list)
                 elif etype[1] == 'forall':
