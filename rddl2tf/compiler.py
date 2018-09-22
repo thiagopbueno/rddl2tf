@@ -132,9 +132,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('intermediate_cpfs'):
                 for cpf in self.rddl.domain.intermediate_cpfs:
-                    name_scope = cpf.name
-                    name_scope = name_scope.replace('/', '-')
-                    name_scope = name_scope.replace("'", '')
+                    name_scope = self._identifier(cpf.name)
                     with tf.name_scope(name_scope):
                         t = self._compile_expression(cpf.expr, scope, batch_size)
                     interm_fluents.append((cpf.name, t))
@@ -157,9 +155,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('state_cpfs'):
                 for cpf in self.rddl.domain.state_cpfs:
-                    name_scope = cpf.name
-                    name_scope = name_scope.replace('/', '-')
-                    name_scope = name_scope.replace("'", '')
+                    name_scope = self._identifier(cpf.name)
                     with tf.name_scope(name_scope):
                         t = self._compile_expression(cpf.expr, scope, batch_size)
                     next_state_fluents.append((cpf.name, t))
@@ -770,7 +766,7 @@ class Compiler(object):
                         fluent = val
 
             with self.graph.as_default():
-                t = tf.constant(fluent, dtype=dtype, name=name)
+                t = tf.constant(fluent, dtype=dtype, name=self._identifier(name))
                 scope = [None] * len(t.shape)
                 fluent = TensorFluent(t, scope, batch=False)
                 fluent_pair = (name, fluent)
@@ -1019,6 +1015,12 @@ class Compiler(object):
         elif range_type == 'bool':
             dtype = tf.bool
         return dtype
+
+    @classmethod
+    def _identifier(cls, name):
+        name = name.replace("'", '')
+        name = name.replace('/', '-')
+        return name
 
     def _param_types_to_shape(self, param_types: Optional[str]) -> Sequence[int]:
         '''Returns the fluent shape given its `param_types`.'''

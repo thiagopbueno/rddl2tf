@@ -145,7 +145,7 @@ class TestCompiler(unittest.TestCase):
             self.assertIn(name, expected_non_fluents)
             shape = expected_non_fluents[name]['shape']
             dtype = expected_non_fluents[name]['dtype']
-            self.assertEqual(fluent.name, 'non_fluents/{}:0'.format(name))
+            self.assertEqual(fluent.name, 'non_fluents/{}:0'.format(name.replace('/', '-')))
             self.assertIsInstance(fluent, TensorFluent)
             self.assertEqual(fluent.dtype, dtype)
             self.assertEqual(fluent.shape.as_list(), shape)
@@ -191,7 +191,7 @@ class TestCompiler(unittest.TestCase):
             self.assertIn(name, expected_state_fluents)
             shape = expected_state_fluents[name]['shape']
             dtype = expected_state_fluents[name]['dtype']
-            self.assertEqual(fluent.name, '{}:0'.format(name))
+            self.assertEqual(fluent.name, '{}:0'.format(name.replace('/', '-')))
             self.assertIsInstance(fluent, TensorFluent)
             self.assertEqual(fluent.dtype, dtype)
             self.assertEqual(fluent.shape.as_list(), shape)
@@ -226,7 +226,7 @@ class TestCompiler(unittest.TestCase):
             self.assertIn(name, expected_action_fluents)
             shape = expected_action_fluents[name]['shape']
             dtype = expected_action_fluents[name]['dtype']
-            self.assertEqual(fluent.name, '{}:0'.format(name))
+            self.assertEqual(fluent.name, '{}:0'.format(name.replace('/', '-')))
             self.assertIsInstance(fluent, TensorFluent)
             self.assertEqual(fluent.dtype, dtype)
             self.assertEqual(fluent.shape.as_list(), shape)
