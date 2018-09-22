@@ -1,12 +1,84 @@
 # rddl2tf [![Build Status](https://travis-ci.org/thiagopbueno/rddl2tf.svg?branch=master)](https://travis-ci.org/thiagopbueno/rddl2tf) [![License](https://img.shields.io/aur/license/yaourt.svg)](https://github.com/thiagopbueno/rddl2tf/blob/master/LICENSE)
 
-RDDL2TensorFlow compiler and trajectory simulator in Python3.
+RDDL2TensorFlow compiler in Python3.
 
 # Quickstart
 
 ```text
 $ pip3 install rddl2tf
 ```
+
+
+# Usage
+
+rddl2tf can be used as a standalone script or programmatically.
+
+
+## Script mode
+
+```text
+$ rddl2tf --help
+usage: rddl2tf [-h] [-b BATCH_SIZE] [--logdir LOGDIR] rddl
+
+RDDL2TensorFlow compiler in Python3.
+
+positional arguments:
+  rddl                  path to RDDL file or rddlgym problem id
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -b BATCH_SIZE, --batch-size BATCH_SIZE
+                        number of fluents in a batch (default=256)
+  --logdir LOGDIR       log directory for tensorboard graph visualization
+                        (default=/tmp/rddl2tf)
+```
+
+### Examples
+
+```text
+$ rddl2tf Reservoir-8 --batch-size=1024 --logdir=/tmp/rddl2tf
+tensorboard --logdir /tmp/rddl2tf/reservoir/inst_reservoir_res8
+```
+
+```text
+$ rddl2tf Mars_Rover --batch-size=1024 --logdir=/tmp/rddl2tf
+tensorboard --logdir /tmp/rddl2tf/simple_mars_rover/inst_simple_mars_rover_pics3
+```
+
+
+## Programmatic mode
+
+```python
+import rddlgym
+
+from rddl2tf.compiler import Compiler
+
+# parse and compile RDDL
+model_id = 'Reservoir-8'
+model = rddlgym.make(model_id, mode=rddlgym.AST)
+compiler = Compiler(model)
+
+# set batch mode
+compiler.batch_mode_on()
+batch_size = 256
+
+# compile initial state and default action fluents
+state = compiler.compile_initial_state(batch_size)
+action = compiler.compile_default_action(batch_size)
+
+# compile state invariants and action preconditions
+invariants = compiler.compile_state_invariants(state)
+preconditions = compiler.compile_action_preconditions(state, action)
+
+# compile intermediate fluents and next state fluents
+scope = compiler.transition_scope(state, action)
+interms, next_state = compiler.compile_cpfs(scope, batch_size)
+
+# compile reward function
+scope.update(next_state)
+reward = compiler.compile_reward(scope)
+```
+
 
 # Compiler
 
