@@ -81,7 +81,9 @@ class Compiler(object):
         Returns:
             A tuple of tensors.
         '''
-        return self._compile_batch_fluents(self.initial_state_fluents, batch_size)
+        with self.graph.as_default():
+            with tf.name_scope('initial_state'):
+                return self._compile_batch_fluents(self.initial_state_fluents, batch_size)
 
     def compile_default_action(self, batch_size: int) -> Sequence[tf.Tensor]:
         '''Returns a tuple of tensors representing the default action fluents.
@@ -92,7 +94,9 @@ class Compiler(object):
         Returns:
             A tuple of tensors.
         '''
-        return self._compile_batch_fluents(self.default_action_fluents, batch_size)
+        with self.graph.as_default():
+            with tf.name_scope('default_action'):
+                return self._compile_batch_fluents(self.default_action_fluents, batch_size)
 
     def compile_cpfs(self,
             scope: Dict[str, TensorFluent],
