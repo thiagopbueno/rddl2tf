@@ -173,9 +173,11 @@ class Compiler(object):
             A :obj:`rddl2tf.fluent.TensorFluent` representing the reward function.
         '''
         reward_expr = self.rddl.domain.reward
-        t = self._compile_expression(reward_expr, scope)
-        tensor = tf.expand_dims(t.tensor, -1)
-        return TensorFluent(tensor, t.scope[:], t.batch)
+        with self.graph.as_default():
+            with tf.name_scope('reward'):
+                t = self._compile_expression(reward_expr, scope)
+                tensor = tf.expand_dims(t.tensor, -1)
+                return TensorFluent(tensor, t.scope[:], t.batch)
 
     def compile_action_preconditions(self,
             state: Sequence[tf.Tensor],
