@@ -891,8 +891,9 @@ class Compiler(object):
 
         with self.graph.as_default():
 
-            if etype[0] == 'number':
-                return TensorFluent.constant(args)
+            if etype[0] == 'constant':
+                dtype = self._python_type_to_dtype(etype[1])
+                return TensorFluent.constant(args, dtype=dtype)
             elif etype[0] == 'pvar':
                 name = expr._pvar_to_name(args)
                 if name not in scope:
@@ -1063,12 +1064,22 @@ class Compiler(object):
     @classmethod
     def _range_type_to_dtype(cls, range_type: str) -> Optional[tf.DType]:
         '''Maps RDDL range types to TensorFlow dtypes.'''
+        range2dtype = {
+            'real': tf.float32,
+            'int': tf.int32,
+            'bool': tf.bool
+        }
+        return range2dtype[range_type]
+
+    @classmethod
+    def _python_type_to_dtype(cls, python_type: type) -> Optional[tf.DType]:
+        '''Maps python types to TensorFlow dtypes.'''
         dtype = None
-        if range_type == 'real':
+        if python_type == float:
             dtype = tf.float32
-        elif range_type == 'int':
+        elif python_type == int:
             dtype = tf.int32
-        elif range_type == 'bool':
+        elif python_type == bool:
             dtype = tf.bool
         return dtype
 

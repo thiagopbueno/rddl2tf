@@ -64,7 +64,7 @@ class TestCompiler(unittest.TestCase):
         self.assertIn('outflow/1', lower_bounds)
         lower = lower_bounds['outflow/1']
         self.assertIsInstance(lower, Expression)
-        self.assertTrue(lower.is_number_expression())
+        self.assertTrue(lower.is_constant_expression())
         self.assertEqual(lower.value, 0)
 
     def test_upper_bound_constraints(self):
@@ -134,7 +134,7 @@ class TestCompiler(unittest.TestCase):
         lower, upper = bounds['outflow/1']
         self.assertIsInstance(lower, TensorFluent)
         self.assertListEqual(lower.shape.as_list(), [])
-        self.assertEqual(lower.dtype, tf.float32)
+        self.assertEqual(lower.dtype, tf.int32)
         self.assertIsInstance(upper, TensorFluent)
         self.assertEqual(upper.dtype, tf.float32)
         self.assertListEqual(upper.shape.as_list(), [batch_size, 8])
