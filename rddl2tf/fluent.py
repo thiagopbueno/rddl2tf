@@ -410,6 +410,15 @@ class TensorFluent(object):
         if true_case_tensor.shape != false_case_tensor.shape:
             raise ValueError('TensorFluent.if_then_else: cases must be of same shape!')
 
+        if true_case_tensor.dtype == tf.float32 and false_case_tensor.dtype != tf.float32:
+            false_case_tensor = tf.cast(false_case_tensor, tf.float32)
+        elif true_case_tensor.dtype != tf.float32 and false_case_tensor.dtype == tf.float32:
+            true_case_tensor = tf.cast(true_case_tensor, tf.float32)
+        elif true_case_tensor.dtype == tf.int32 and false_case_tensor.dtype != tf.int32:
+            false_case_tensor = tf.cast(false_case_tensor, tf.int32)
+        elif true_case_tensor.dtype != tf.int32 and false_case_tensor.dtype == tf.int32:
+            true_case_tensor = tf.cast(true_case_tensor, tf.int32)
+
         t = tf.where(condition_tensor, x=true_case_tensor, y=false_case_tensor)
         scope = condition.scope.as_list()
 
