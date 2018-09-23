@@ -908,7 +908,12 @@ class Compiler(object):
                     raise ValueError('Variable in scope must be TensorFluent-like: {}'.format(fluent))
                 return fluent
             elif etype[0] == 'randomvar':
-                if etype[1] == 'Normal':
+                if etype[1] == 'KronDelta':
+                    return self._compile_expression(args[0], scope)
+                elif etype[1] == 'Bernoulli':
+                    mean = self._compile_expression(args[0], scope)
+                    return TensorFluent.Bernoulli(mean, batch_size)
+                elif etype[1] == 'Normal':
                     mean = self._compile_expression(args[0], scope)
                     variance = self._compile_expression(args[1], scope)
                     return TensorFluent.Normal(mean, variance, batch_size)

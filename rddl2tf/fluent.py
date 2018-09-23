@@ -81,6 +81,30 @@ class TensorFluent(object):
         return TensorFluent(t, scope, batch=batch)
 
     @classmethod
+    def Bernoulli(cls,
+        mean: 'TensorFluent',
+        batch_size: Optional[int] = None) -> 'TensorFluent':
+        '''Returns a TensorFluent for the Bernoulli sampling op with given mean parameter.
+
+        Args:
+            mean: The mean parameter of the Bernoulli distribution.
+            batch_size: The size of the batch (optional).
+
+        Returns:
+            A TensorFluent sample drawn from the Bernoulli distribution.
+        '''
+        probs = mean.tensor
+        dist = tf.distributions.Bernoulli(probs=probs, dtype=tf.bool)
+        batch = mean.batch
+        if not batch and batch_size is not None:
+            t = dist.sample(batch_size)
+            batch = True
+        else:
+            t = dist.sample()
+        scope = mean.scope.as_list()
+        return TensorFluent(t, scope, batch=batch)
+
+    @classmethod
     def Normal(cls,
             mean: 'TensorFluent', variance: 'TensorFluent',
             batch_size: Optional[int] = None) -> 'TensorFluent':
