@@ -38,7 +38,7 @@ setup(
     keywords=['rddl', 'tensorflow'],
     url='https://github.com/thiagopbueno/rddl2tf',
     packages=find_packages(),
-    scripts=[],
+    scripts=['scripts/rddl2tf'],
     install_requires=[
         'pyrddl',
         'rddlgym',
