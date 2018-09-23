@@ -12,7 +12,7 @@ numpy==1.15.1
 ply==3.11
 protobuf==3.6.1
 pyparsing==2.2.0
-pyrddl==0.1.0
+pyrddl>=0.1.6
 python-dateutil==2.7.3
 pytz==2018.5
 rddlgym>=0.3.0
