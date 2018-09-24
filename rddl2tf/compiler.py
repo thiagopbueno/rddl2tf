@@ -874,7 +874,8 @@ class Compiler(object):
     def _compile_expression(self,
             expr: Expression,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None) -> TensorFluent:
+            batch_size: Optional[int] = None,
+            reparameterize: Optional[bool] = False) -> TensorFluent:
         '''Compile the expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -895,7 +896,11 @@ class Compiler(object):
             elif etype[0] == 'pvar':
                 return self._compile_pvariable_expression(expr, scope, batch_size)
             elif etype[0] == 'randomvar':
-                return self._compile_random_variable_expression(expr, scope, batch_size)
+                dist, sample = self._compile_random_variable_expression(expr, scope, batch_size)
+                if reparameterize:
+                    return self._reparameterize_distribution(dist, sample.shape)
+                else:
+                    return sample
             elif etype[0] == 'arithmetic':
                 return self._compile_arithmetic_expression(expr, scope, batch_size)
             elif etype[0] == 'boolean':
@@ -908,6 +913,29 @@ class Compiler(object):
                 return self._compile_control_flow_expression(expr, scope, batch_size)
             elif etype[0] == 'aggregation':
                 return self._compile_aggregation_expression(expr, scope, batch_size)
+
+        raise ValueError('Expression type unknown: {}'.format(etype))
+
+    def _reparameterize_distribution(self, distribution, sample_shape):
+        name = distribution.name
+        if name == 'Uniform':
+            noise = tf.distributions.Uniform().sample(sample_shape)
+            sample = distribution.low + (distribution.high - distribution.low) * noise
+            return (sample, noise)
+        elif name in ['Normal', 'Laplace']:
+            dists = {
+                'Normal': tf.distributions.Normal,
+                'Laplace': tf.distributions.Laplace
+            }
+            noise = dists[name]().sample(sample_shape)
+            sample = distribution.loc + distribution.scale * noise
+            return (sample, noise)
+        elif name == 'Exponential':
+            noise = tf.distributions.Exponential(rate=1.0).sample(sample_shape)
+            sample = noise / distribution.rate
+            return (sample, noise)
+
+        raise ValueError('Distribution {} is not re-parameterizable'.format(name))
 
     def _compile_constant_expression(self,
             expr: Expression,
@@ -981,21 +1009,27 @@ class Compiler(object):
         elif etype[1] == 'Bernoulli':
             mean = self._compile_expression(args[0], scope)
             return TensorFluent.Bernoulli(mean, batch_size)
-        elif etype[1] == 'Normal':
-            mean = self._compile_expression(args[0], scope)
-            variance = self._compile_expression(args[1], scope)
-            return TensorFluent.Normal(mean, variance, batch_size)
         elif etype[1] == 'Uniform':
             low = self._compile_expression(args[0], scope)
             high = self._compile_expression(args[1], scope)
             return TensorFluent.Uniform(low, high, batch_size)
-        elif etype[1] == 'Exponential':
+        elif etype[1] == 'Normal':
             mean = self._compile_expression(args[0], scope)
-            return TensorFluent.Exponential(mean, batch_size)
+            variance = self._compile_expression(args[1], scope)
+            return TensorFluent.Normal(mean, variance, batch_size)
+        elif etype[1] == 'Laplace':
+            mean = self._compile_expression(args[0], scope)
+            variance = self._compile_expression(args[1], scope)
+            return TensorFluent.Laplace(mean, variance, batch_size)
         elif etype[1] == 'Gamma':
             shape = self._compile_expression(args[0], scope)
             scale = self._compile_expression(args[1], scope)
             return TensorFluent.Gamma(shape, scale, batch_size)
+        elif etype[1] == 'Exponential':
+            mean = self._compile_expression(args[0], scope)
+            return TensorFluent.Exponential(mean, batch_size)
+        else:
+            raise ValueError('Unknown distribution {}.'.format(etype))
 
     def _compile_arithmetic_expression(self,
             expr: Expression,
