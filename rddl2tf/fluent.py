@@ -166,28 +166,35 @@ class TensorFluent(object):
         return (dist, TensorFluent(t, scope, batch=batch))
 
     @classmethod
-    def Exponential(cls,
-            mean: 'TensorFluent',
-            batch_size: Optional[int] = None) -> 'TensorFluent':
-        '''Returns a TensorFluent for the Exponential sampling op with given mean parameter.
+    def Laplace(cls,
+            mean: 'TensorFluent', variance: 'TensorFluent',
+            batch_size: Optional[int] = None) -> Tuple[Distribution, 'TensorFluent']:
+        '''Returns a TensorFluent for the Laplace sampling op with given mean and variance.
 
         Args:
-            mean: The mean parameter of the Exponential distribution.
+            mean: The mean parameter of the Laplace distribution.
+            variance: The variance parameter of the Laplace distribution.
             batch_size: The size of the batch (optional).
 
         Returns:
-            A TensorFluent sample drawn from the Exponential distribution.
+            The Laplace distribution and a TensorFluent sample drawn from the distribution.
+
+        Raises:
+            ValueError: If parameters do not have the same scope.
         '''
-        rate = 1 / mean.tensor
-        dist = tf.distributions.Exponential(rate)
-        batch = mean.batch
+        if mean.scope != variance.scope:
+            raise ValueError('Laplace distribution: parameters must have same scope!')
+        loc = mean.tensor
+        scale = tf.sqrt(variance.tensor / 2.0)
+        dist = tf.distributions.Laplace(loc, scale)
+        batch = mean.batch or variance.batch
         if not batch and batch_size is not None:
             t = dist.sample(batch_size)
             batch = True
         else:
             t = dist.sample()
         scope = mean.scope.as_list()
-        return TensorFluent(t, scope, batch=batch)
+        return (dist, TensorFluent(t, scope, batch=batch))
 
     @classmethod
     def Gamma(cls,
