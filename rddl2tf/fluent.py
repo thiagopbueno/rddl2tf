@@ -19,9 +19,10 @@ from rddl2tf.fluentshape import TensorFluentShape
 
 import tensorflow as tf
 
-from typing import Callable, List, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 Value = Union[bool, int, float]
+Distribution = tf.distributions.Distribution
 
 
 class TensorFluent(object):
@@ -83,7 +84,7 @@ class TensorFluent(object):
     @classmethod
     def Bernoulli(cls,
         mean: 'TensorFluent',
-        batch_size: Optional[int] = None) -> 'TensorFluent':
+        batch_size: Optional[int] = None) -> Tuple[Distribution, 'TensorFluent']:
         '''Returns a TensorFluent for the Bernoulli sampling op with given mean parameter.
 
         Args:
@@ -91,7 +92,7 @@ class TensorFluent(object):
             batch_size: The size of the batch (optional).
 
         Returns:
-            A TensorFluent sample drawn from the Bernoulli distribution.
+            The Bernoulli distribution and a TensorFluent sample drawn from the distribution.
         '''
         probs = mean.tensor
         dist = tf.distributions.Bernoulli(probs=probs, dtype=tf.bool)
@@ -102,12 +103,41 @@ class TensorFluent(object):
         else:
             t = dist.sample()
         scope = mean.scope.as_list()
-        return TensorFluent(t, scope, batch=batch)
+        return (dist, TensorFluent(t, scope, batch=batch))
+
+    @classmethod
+    def Uniform(cls,
+            low: 'TensorFluent', high: 'TensorFluent',
+            batch_size: Optional[int] = None) -> Tuple[Distribution, 'TensorFluent']:
+        '''Returns a TensorFluent for the Uniform sampling op with given low and high parameters.
+
+        Args:
+            low: The low parameter of the Uniform distribution.
+            high: The high parameter of the Uniform distribution.
+            batch_size: The size of the batch (optional).
+
+        Returns:
+            The Uniform distribution and a TensorFluent sample drawn from the distribution.
+
+        Raises:
+            ValueError: If parameters do not have the same scope.
+        '''
+        if low.scope != high.scope:
+            raise ValueError('Uniform distribution: parameters must have same scope!')
+        dist = tf.distributions.Uniform(low.tensor, high.tensor)
+        batch = low.batch or high.batch
+        if not batch and batch_size is not None:
+            t = dist.sample(batch_size)
+            batch = True
+        else:
+            t = dist.sample()
+        scope = low.scope.as_list()
+        return (dist, TensorFluent(t, scope, batch=batch))
 
     @classmethod
     def Normal(cls,
             mean: 'TensorFluent', variance: 'TensorFluent',
-            batch_size: Optional[int] = None) -> 'TensorFluent':
+            batch_size: Optional[int] = None) -> Tuple[Distribution, 'TensorFluent']:
         '''Returns a TensorFluent for the Normal sampling op with given mean and variance.
 
         Args:
@@ -116,7 +146,7 @@ class TensorFluent(object):
             batch_size: The size of the batch (optional).
 
         Returns:
-            A TensorFluent sample drawn from the Normal distribution.
+            The Normal distribution and a TensorFluent sample drawn from the distribution.
 
         Raises:
             ValueError: If parameters do not have the same scope.
@@ -133,36 +163,7 @@ class TensorFluent(object):
         else:
             t = dist.sample()
         scope = mean.scope.as_list()
-        return TensorFluent(t, scope, batch=batch)
-
-    @classmethod
-    def Uniform(cls,
-            low: 'TensorFluent', high: 'TensorFluent',
-            batch_size: Optional[int] = None) -> 'TensorFluent':
-        '''Returns a TensorFluent for the Uniform sampling op with given low and high parameters.
-
-        Args:
-            low: The low parameter of the Uniform distribution.
-            high: The high parameter of the Uniform distribution.
-            batch_size: The size of the batch (optional).
-
-        Returns:
-            A TensorFluent sample drawn from the Uniform distribution.
-
-        Raises:
-            ValueError: If parameters do not have the same scope.
-        '''
-        if low.scope != high.scope:
-            raise ValueError('Uniform distribution: parameters must have same scope!')
-        dist = tf.distributions.Uniform(low.tensor, high.tensor)
-        batch = low.batch or high.batch
-        if not batch and batch_size is not None:
-            t = dist.sample(batch_size)
-            batch = True
-        else:
-            t = dist.sample()
-        scope = low.scope.as_list()
-        return TensorFluent(t, scope, batch=batch)
+        return (dist, TensorFluent(t, scope, batch=batch))
 
     @classmethod
     def Exponential(cls,
@@ -192,7 +193,7 @@ class TensorFluent(object):
     def Gamma(cls,
             shape: 'TensorFluent',
             scale: 'TensorFluent',
-            batch_size: Optional[int] = None) -> 'TensorFluent':
+            batch_size: Optional[int] = None) -> Tuple[Distribution, 'TensorFluent']:
         '''Returns a TensorFluent for the Gamma sampling op with given shape and scale parameters.
 
         Args:
@@ -201,7 +202,7 @@ class TensorFluent(object):
             batch_size: The size of the batch (optional).
 
         Returns:
-            A TensorFluent sample drawn from the Uniform distribution.
+            The Gamma distribution and a TensorFluent sample drawn from the distribution.
 
         Raises:
             ValueError: If parameters do not have the same scope.
@@ -218,7 +219,31 @@ class TensorFluent(object):
         else:
             t = dist.sample()
         scope = shape.scope.as_list()
-        return TensorFluent(t, scope, batch=batch)
+        return (dist, TensorFluent(t, scope, batch=batch))
+
+    @classmethod
+    def Exponential(cls,
+            mean: 'TensorFluent',
+            batch_size: Optional[int] = None) -> Tuple[Distribution, 'TensorFluent']:
+        '''Returns a TensorFluent for the Exponential sampling op with given mean parameter.
+
+        Args:
+            mean: The mean parameter of the Exponential distribution.
+            batch_size: The size of the batch (optional).
+
+        Returns:
+            The Exponential distribution and a TensorFluent sample drawn from the distribution.
+        '''
+        rate = 1 / mean.tensor
+        dist = tf.distributions.Exponential(rate)
+        batch = mean.batch
+        if not batch and batch_size is not None:
+            t = dist.sample(batch_size)
+            batch = True
+        else:
+            t = dist.sample()
+        scope = mean.scope.as_list()
+        return (dist, TensorFluent(t, scope, batch=batch))
 
     @classmethod
     def abs(cls, x: 'TensorFluent') -> 'TensorFluent':
