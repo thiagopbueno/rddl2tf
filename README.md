@@ -1,4 +1,4 @@
-# rddl2tf [![Build Status](https://travis-ci.org/thiagopbueno/rddl2tf.svg?branch=master)](https://travis-ci.org/thiagopbueno/rddl2tf) [![License](https://img.shields.io/aur/license/yaourt.svg)](https://github.com/thiagopbueno/rddl2tf/blob/master/LICENSE)
+# rddl2tf [![Build Status](https://travis-ci.org/thiagopbueno/rddl2tf.svg?branch=master)](https://travis-ci.org/thiagopbueno/rddl2tf) [![Documentation Status](https://readthedocs.org/projects/rddl2tf/badge/?version=latest)](https://rddl2tf.readthedocs.io/en/latest/?badge=latest) [![License](https://img.shields.io/aur/license/yaourt.svg)](https://github.com/thiagopbueno/rddl2tf/blob/master/LICENSE)
 
 RDDL2TensorFlow compiler in Python3.
 
@@ -82,6 +82,7 @@ reward = compiler.compile_reward(scope)
 
 # Compiler
 
+
 ## Parameterized Variables (pvariables)
 
 Each RDDL fluent is compiled to a ``rddl2tf.TensorFluent`` after instantiation.
@@ -100,6 +101,16 @@ Each CPF expression is compiled into an operation in a ``tf.Graph``, possibly co
 Note that the RDDL2TensorFlow compiler currently only supports element-wise operations (e.g. ``a(?x, ?y) = b(?x) * c(?y)`` is not allowed). However, all compiled operations are vectorized, i.e., computations are done simultaneously for all object instantiations of a pvariable.
 
 Optionally, during simulation operations can be evaluated in batch mode. In this case, state-action trajectories are generated in parallel by the ``rddl2tf.Simulator``.
+
+
+# Documentation
+
+Please refer to [https://rddl2tf.readthedocs.io/](https://rddl2tf.readthedocs.io/en/latest/) for the code documentation.
+
+
+# Support
+
+If you are having issues with ``rddl2tf``, please let me know at: [thiago.pbueno@gmail.com](mailto://thiago.pbueno@gmail.com).
 
 
 # License
