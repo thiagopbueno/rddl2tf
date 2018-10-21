@@ -1284,8 +1284,10 @@ class Compiler(object):
     def _python_type_to_dtype(cls, python_type: type) -> Optional[tf.DType]:
         '''Maps python types to TensorFlow dtypes.'''
         dtype = None
-        if python_type in [float, int]:
+        if python_type == float:
             dtype = tf.float32
+        elif python_type == int:
+            dtype = tf.int32
         elif python_type == bool:
             dtype = tf.bool
         return dtype

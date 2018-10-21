@@ -34,8 +34,10 @@ class TestCompiler(unittest.TestCase):
     def setUp(self):
         self.rddl1 = rddlgym.make('Reservoir-8', mode=rddlgym.AST)
         self.rddl2 = rddlgym.make('Mars_Rover', mode=rddlgym.AST)
+        self.rddl3 = rddlgym.make('HVAC-v1', mode=rddlgym.AST)
         self.compiler1 = Compiler(self.rddl1)
         self.compiler2 = Compiler(self.rddl2)
+        self.compiler3 = Compiler(self.rddl3)
 
     def test_build_object_table(self):
         self.assertIn('res', self.compiler1.object_table)
@@ -63,6 +65,14 @@ class TestCompiler(unittest.TestCase):
         self.assertIsInstance(lower_bounds, dict)
         self.assertIn('outflow/1', lower_bounds)
         lower = lower_bounds['outflow/1']
+        self.assertIsInstance(lower, Expression)
+        self.assertTrue(lower.is_constant_expression())
+        self.assertEqual(lower.value, 0)
+
+        lower_bounds = self.compiler3.action_lower_bound_constraints
+        self.assertIsInstance(lower_bounds, dict)
+        self.assertIn('AIR/1', lower_bounds)
+        lower = lower_bounds['AIR/1']
         self.assertIsInstance(lower, Expression)
         self.assertTrue(lower.is_constant_expression())
         self.assertEqual(lower.value, 0)
@@ -121,23 +131,71 @@ class TestCompiler(unittest.TestCase):
             self.assertEqual(checking.dtype, tf.bool)
             self.assertListEqual(checking.shape.as_list(), [batch_size])
 
-    def test_compile_action_bound_constraints(self):
+    def test_compile_action_lower_bound_constraints(self):
         batch_size = 1000
-        self.compiler1.batch_mode_on()
-        initial_state = self.compiler1.compile_initial_state(batch_size)
-        default_action_fluents = self.compiler1.compile_default_action(batch_size)
-        bounds = self.compiler1.compile_action_bound_constraints(initial_state)
-        self.assertIsInstance(bounds, dict)
-        self.assertIn('outflow/1', bounds)
-        self.assertIsInstance(bounds['outflow/1'], tuple)
-        self.assertEqual(len(bounds['outflow/1']), 2)
-        lower, upper = bounds['outflow/1']
-        self.assertIsInstance(lower, TensorFluent)
-        self.assertListEqual(lower.shape.as_list(), [])
-        self.assertEqual(lower.dtype, tf.int32)
-        self.assertIsInstance(upper, TensorFluent)
-        self.assertEqual(upper.dtype, tf.float32)
-        self.assertListEqual(upper.shape.as_list(), [batch_size, 8])
+        compilers = [self.compiler1, self.compiler3]
+        expected = [[('outflow/1', [], tf.int32)], [('AIR/1', [], tf.int32)]]
+
+        for compiler, expected_bounds in zip(compilers, expected):
+            compiler.batch_mode_on()
+            initial_state = compiler.compile_initial_state(batch_size)
+            default_action_fluents = compiler.compile_default_action(batch_size)
+            bounds = compiler.compile_action_bound_constraints(initial_state)
+            self.assertIsInstance(bounds, dict)
+
+            self.assertEqual(len(bounds), len(expected_bounds))
+            for fluent_name, shape, dtype in expected_bounds:
+                self.assertIn(fluent_name, bounds)
+                self.assertIsInstance(bounds[fluent_name], tuple)
+                self.assertEqual(len(bounds[fluent_name]), 2)
+                lower, _ = bounds[fluent_name]
+                self.assertIsInstance(lower, TensorFluent)
+                self.assertListEqual(lower.shape.as_list(), shape)
+                self.assertEqual(lower.dtype, dtype)
+
+    def test_compile_action_lower_bound_constraints(self):
+        batch_size = 1000
+        compilers = [self.compiler1, self.compiler3]
+        expected = [[('outflow/1', [], tf.int32)], [('AIR/1', [], tf.int32)]]
+
+        for compiler, expected_bounds in zip(compilers, expected):
+            compiler.batch_mode_on()
+            initial_state = compiler.compile_initial_state(batch_size)
+            default_action_fluents = compiler.compile_default_action(batch_size)
+            bounds = compiler.compile_action_bound_constraints(initial_state)
+            self.assertIsInstance(bounds, dict)
+
+            self.assertEqual(len(bounds), len(expected_bounds))
+            for fluent_name, shape, dtype in expected_bounds:
+                self.assertIn(fluent_name, bounds)
+                self.assertIsInstance(bounds[fluent_name], tuple)
+                self.assertEqual(len(bounds[fluent_name]), 2)
+                lower, _ = bounds[fluent_name]
+                self.assertIsInstance(lower, TensorFluent)
+                self.assertListEqual(lower.shape.as_list(), shape)
+                self.assertEqual(lower.dtype, dtype)
+
+    def test_compile_action_upper_bound_constraints(self):
+        batch_size = 1000
+        compilers = [self.compiler1, self.compiler3]
+        expected = [[('outflow/1', [batch_size, 8], tf.float32)], [('AIR/1', [3], tf.float32)]]
+
+        for compiler, expected_bounds in zip(compilers, expected):
+            compiler.batch_mode_on()
+            initial_state = compiler.compile_initial_state(batch_size)
+            default_action_fluents = compiler.compile_default_action(batch_size)
+            bounds = compiler.compile_action_bound_constraints(initial_state)
+            self.assertIsInstance(bounds, dict)
+
+            self.assertEqual(len(bounds), len(expected_bounds))
+            for fluent_name, shape, dtype in expected_bounds:
+                self.assertIn(fluent_name, bounds)
+                self.assertIsInstance(bounds[fluent_name], tuple)
+                self.assertEqual(len(bounds[fluent_name]), 2)
+                _, upper = bounds[fluent_name]
+                self.assertIsInstance(upper, TensorFluent)
+                self.assertEqual(upper.dtype, dtype)
+                self.assertListEqual(upper.shape.as_list(), shape)
 
     def test_instantiate_non_fluents(self):
         nf = dict(self.compiler1.non_fluents)

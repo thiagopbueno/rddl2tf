@@ -570,7 +570,9 @@ class TensorFluent(object):
         Returns:
             A TensorFluent wrapping the cast operation.
         '''
-        t = self.tensor if self.tensor.dtype == dtype else tf.cast(self.tensor, dtype)
+        if self.dtype == dtype:
+            return self
+        t = tf.cast(self.tensor, dtype)
         scope = self.scope.as_list()
         batch = self.batch
         return TensorFluent(t, scope, batch=batch)
