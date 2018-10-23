@@ -874,8 +874,7 @@ class Compiler(object):
     def _compile_expression(self,
             expr: Expression,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None,
-            reparameterize: Optional[bool] = False) -> TensorFluent:
+            batch_size: Optional[int] = None) -> TensorFluent:
         '''Compile the expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -885,7 +884,25 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            :obj:`rddl2tf.fluent.TensorFluent`: The compiled TensorFluent.
+        '''
+        sample, log_prob = self._compile_probabilistic_expression(expr, scope, batch_size)
+        return sample
+
+    def _compile_probabilistic_expression(self,
+            expr: Expression,
+            scope: Dict[str, TensorFluent],
+            batch_size: Optional[int] = None) -> TensorFluent:
+        '''Compile the expression `expr` into a TensorFluent as a
+        probabilistic sample in the given `scope` with optional batch size.
+
+        Args:
+            expr (:obj:`rddl2tf.expr.Expression`): A RDDL expression.
+            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            batch_size (Optional[size]): The batch size.
+
+        Returns:
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
 
@@ -896,11 +913,7 @@ class Compiler(object):
             elif etype[0] == 'pvar':
                 return self._compile_pvariable_expression(expr, scope, batch_size)
             elif etype[0] == 'randomvar':
-                dist, sample = self._compile_random_variable_expression(expr, scope, batch_size)
-                if reparameterize:
-                    return self._reparameterize_distribution(dist, sample.shape)
-                else:
-                    return sample
+                return self._compile_random_variable_expression(expr, scope, batch_size)
             elif etype[0] == 'arithmetic':
                 return self._compile_arithmetic_expression(expr, scope, batch_size)
             elif etype[0] == 'boolean':
@@ -913,8 +926,8 @@ class Compiler(object):
                 return self._compile_control_flow_expression(expr, scope, batch_size)
             elif etype[0] == 'aggregation':
                 return self._compile_aggregation_expression(expr, scope, batch_size)
-
-        raise ValueError('Expression type unknown: {}'.format(etype))
+            else:
+                raise ValueError('Expression type unknown: {}'.format(etype))
 
     def _reparameterize_distribution(self, distribution, sample_shape):
         name = distribution.name
@@ -950,12 +963,14 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
         dtype = self._python_type_to_dtype(etype[1])
-        return TensorFluent.constant(args, dtype=dtype)
+        fluent = TensorFluent.constant(args, dtype=dtype)
+        log_prob = tf.constant(0.0, shape=fluent.shape._shape)
+        return (fluent, log_prob)
 
     def _compile_pvariable_expression(self,
             expr: Expression,
@@ -970,7 +985,7 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
@@ -985,7 +1000,8 @@ class Compiler(object):
             fluent = TensorFluent(fluent, scope, batch=self.batch_mode)
         else:
             raise ValueError('Variable in scope must be TensorFluent-like: {}'.format(fluent))
-        return fluent
+        log_prob = tf.constant(0.0, shape=fluent.shape._shape)
+        return (fluent, log_prob)
 
     def _compile_random_variable_expression(self,
             expr: Expression,
@@ -1000,36 +1016,50 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
+
         if etype[1] == 'KronDelta':
-            return self._compile_expression(args[0], scope)
+            sample, log_prob = self._compile_probabilistic_expression(args[0], scope)
         elif etype[1] == 'Bernoulli':
-            mean = self._compile_expression(args[0], scope)
-            return TensorFluent.Bernoulli(mean, batch_size)
+            mean, mean_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            dist, sample = TensorFluent.Bernoulli(mean, batch_size)
+            sample_log_prob = dist.log_prob(tf.stop_gradient(sample.tensor))
+            log_prob = mean_log_prob + sample_log_prob
         elif etype[1] == 'Uniform':
-            low = self._compile_expression(args[0], scope)
-            high = self._compile_expression(args[1], scope)
-            return TensorFluent.Uniform(low, high, batch_size)
+            low, low_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            high, high_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            dist, sample = TensorFluent.Uniform(low, high, batch_size)
+            sample_log_prob = dist.log_prob(tf.stop_gradient(sample.tensor))
+            log_prob = low_log_prob + high_log_prob + sample_log_prob
         elif etype[1] == 'Normal':
-            mean = self._compile_expression(args[0], scope)
-            variance = self._compile_expression(args[1], scope)
-            return TensorFluent.Normal(mean, variance, batch_size)
+            mean, mean_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            variance, variance_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            dist, sample = TensorFluent.Normal(mean, variance, batch_size)
+            sample_log_prob = dist.log_prob(tf.stop_gradient(sample.tensor))
+            log_prob = mean_log_prob + variance_log_prob + sample_log_prob
         elif etype[1] == 'Laplace':
-            mean = self._compile_expression(args[0], scope)
-            variance = self._compile_expression(args[1], scope)
-            return TensorFluent.Laplace(mean, variance, batch_size)
+            mean, mean_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            variance, variance_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            dist, sample = TensorFluent.Laplace(mean, variance, batch_size)
+            sample_log_prob = dist.log_prob(tf.stop_gradient(sample.tensor))
+            log_prob = mean_log_prob + variance_log_prob + sample_log_prob
         elif etype[1] == 'Gamma':
-            shape = self._compile_expression(args[0], scope)
-            scale = self._compile_expression(args[1], scope)
-            return TensorFluent.Gamma(shape, scale, batch_size)
+            shape, shape_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            scale, scale_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            dist, sample = TensorFluent.Gamma(shape, scale, batch_size)
+            sample_log_prob = dist.log_prob(tf.stop_gradient(sample.tensor))
+            log_prob = shape_log_prob + scale_log_prob + sample_log_prob
         elif etype[1] == 'Exponential':
-            mean = self._compile_expression(args[0], scope)
-            return TensorFluent.Exponential(mean, batch_size)
+            mean, mean_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            dist, sample = TensorFluent.Exponential(mean, batch_size)
+            sample_log_prob = dist.log_prob(tf.stop_gradient(sample.tensor))
+            log_prob = mean_log_prob + sample_log_prob
         else:
-            raise ValueError('Unknown distribution {}.'.format(etype))
+            raise ValueError('Invalid random variable expression:\n{}.'.format(expr))
+        return (sample, log_prob)
 
     def _compile_arithmetic_expression(self,
             expr: Expression,
@@ -1044,34 +1074,42 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
-        if etype[1] == '+':
-            if len(args) == 1:
-                op1 = self._compile_expression(args[0], scope)
-                return op1
+
+        if len(args) == 1:
+            if etype[1] == '+':
+                fluent, log_prob = self._compile_probabilistic_expression(args[0], scope)
+            elif etype[1] == '-':
+                op1, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = -op1
             else:
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                return op1 + op2
-        elif etype[1] == '-':
-            if len(args) == 1:
-                op1 = self._compile_expression(args[0], scope)
-                return -op1
+                raise ValueError('Invalid unary arithmetic expression:\n{}'.format(expr))
+        else:
+            if etype[1] == '+':
+                op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = op1 + op2
+            elif etype[1] == '-':
+                op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = op1 - op2
+            elif etype[1] == '*':
+                op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = op1 * op2
+            elif etype[1] == '/':
+                op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = op1 / op2
             else:
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                return op1 - op2
-        elif etype[1] == '*':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 * op2
-        elif etype[1] == '/':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 / op2
+                raise ValueError('Invalid binary arithmetic expression:\n{}'.format(expr))
+
+            log_prob = op1_log_prob + op2_log_prob
+
+        return (fluent, log_prob)
 
     def _compile_boolean_expression(self,
             expr: Expression,
@@ -1086,29 +1124,40 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
-        if etype[1] in ['^', '&']:
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 & op2
-        elif etype[1] == '|':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 | op2
-        elif etype[1] == '=>':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return ~op1 | op2
-        elif etype[1] == '<=>':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return (op1 & op2) | (~op1 & ~op2)
-        elif etype[1] == '~':
-            op = self._compile_expression(args[0], scope)
-            return ~op
+
+        if len(args) == 1:
+            if etype[1] == '~':
+                op, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = ~op
+            else:
+                raise ValueError('Invalid unary boolean expression:\n{}'.format(expr))
+        else:
+            if etype[1] in ['^', '&']:
+                op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = op1 & op2
+            elif etype[1] == '|':
+                op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = op1 | op2
+            elif etype[1] == '=>':
+                op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = ~op1 | op2
+            elif etype[1] == '<=>':
+                op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = (op1 & op2) | (~op1 & ~op2)
+            else:
+                raise ValueError('Invalid binary boolean expression:\n{}'.format(expr))
+
+            log_prob = op1_log_prob + op2_log_prob
+
+        return (fluent, log_prob)
 
     def _compile_relational_expression(self,
             expr: Expression,
@@ -1123,34 +1172,41 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
+
         if etype[1] == '<=':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 <= op2
+            op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            fluent = (op1 <= op2)
         elif etype[1] == '<':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 < op2
+            op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            fluent = (op1 < op2)
         elif etype[1] == '>=':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 >= op2
+            op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            fluent = (op1 >= op2)
         elif etype[1] == '>':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 > op2
+            op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            fluent = (op1 > op2)
         elif etype[1] == '==':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 == op2
+            op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            fluent = (op1 == op2)
         elif etype[1] == '~=':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            return op1 != op2
+            op1, op1_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            op2, op2_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            fluent = (op1 != op2)
+        else:
+            raise ValueError('Invalid relational expression:\n{}'.format(expr))
+
+        log_prob = op1_log_prob + op2_log_prob
+
+        return (fluent, log_prob)
 
     def _compile_function_expression(self,
             expr: Expression,
@@ -1165,49 +1221,60 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
-        if etype[1] == 'abs':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.abs(x)
-        elif etype[1] == 'exp':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.exp(x)
-        elif etype[1] == 'log':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.log(x)
-        elif etype[1] == 'sqrt':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.sqrt(x)
-        elif etype[1] == 'cos':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.cos(x)
-        elif etype[1] == 'sin':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.sin(x)
-        elif etype[1] == 'round':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.round(x)
-        elif etype[1] == 'ceil':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.ceil(x)
-        elif etype[1] == 'floor':
-            x = self._compile_expression(args[0], scope)
-            return TensorFluent.floor(x)
-        elif etype[1] == 'pow':
-            x = self._compile_expression(args[0], scope)
-            y = self._compile_expression(args[1], scope)
-            return TensorFluent.pow(x, y)
-        elif etype[1] == 'max':
-            x = self._compile_expression(args[0], scope)
-            y = self._compile_expression(args[1], scope)
-            return TensorFluent.max(x, y)
-        elif etype[1] == 'min':
-            x = self._compile_expression(args[0], scope)
-            y = self._compile_expression(args[1], scope)
-            return TensorFluent.min(x, y)
+
+        if len(args) == 1:
+            if etype[1] == 'abs':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.abs(x)
+            elif etype[1] == 'exp':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.exp(x)
+            elif etype[1] == 'log':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.log(x)
+            elif etype[1] == 'sqrt':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.sqrt(x)
+            elif etype[1] == 'cos':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.cos(x)
+            elif etype[1] == 'sin':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.sin(x)
+            elif etype[1] == 'round':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.round(x)
+            elif etype[1] == 'ceil':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.ceil(x)
+            elif etype[1] == 'floor':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.floor(x)
+            else:
+                raise ValueError('Invalid unary function expression:\n{}'.format(expr))
+        else:
+            if etype[1] == 'pow':
+                x, x_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                y, y_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = TensorFluent.pow(x, y)
+            elif etype[1] == 'max':
+                x, x_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                y, y_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = TensorFluent.max(x, y)
+            elif etype[1] == 'min':
+                x, x_log_prob = self._compile_probabilistic_expression(args[0], scope)
+                y, y_log_prob = self._compile_probabilistic_expression(args[1], scope)
+                fluent = TensorFluent.min(x, y)
+            else:
+                raise ValueError('Invalid binary function expression:\n{}'.format(expr))
+
+            log_prob = x_log_prob + y_log_prob
+
+        return (fluent, log_prob)
 
     def _compile_control_flow_expression(self,
             expr: Expression,
@@ -1222,15 +1289,23 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
         if etype[1] == 'if':
-            condition = self._compile_expression(args[0], scope)
-            true_case = self._compile_expression(args[1], scope)
-            false_case = self._compile_expression(args[2], scope)
-            return TensorFluent.if_then_else(condition, true_case, false_case)
+            condition, condition_log_prob = self._compile_probabilistic_expression(args[0], scope)
+            true_case, true_case_log_prob = self._compile_probabilistic_expression(args[1], scope)
+            false_case, false_case_log_prob = self._compile_probabilistic_expression(args[2], scope)
+            fluent = TensorFluent.if_then_else(condition, true_case, false_case)
+            log_prob = tf.where(
+                condition.tensor,
+                condition_log_prob + true_case_log_prob,
+                condition_log_prob + false_case_log_prob)
+        else:
+            raise ValueError('Invalid control flow expression:\n{}'.format(expr))
+
+        return (fluent, log_prob)
 
     def _compile_aggregation_expression(self,
             expr: Expression,
@@ -1245,30 +1320,37 @@ class Compiler(object):
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: A TensorFluent.
+            (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
         etype = expr.etype
         args = expr.args
-        if etype[1] not in ['sum', 'prod', 'avg', 'maximum', 'minimum', 'exists', 'forall']:
-            raise ValueError('Unkown aggregation function {}.'.format(etype[1]))
+
         typed_var_list = args[:-1]
         vars_list = [var for _, (var, _) in typed_var_list]
         expr = args[-1]
-        x = self._compile_expression(expr, scope)
+
+        x, log_prob = self._compile_probabilistic_expression(expr, scope)
+
         if etype[1] == 'sum':
-            return x.sum(vars_list=vars_list)
+            fluent = x.sum(vars_list=vars_list)
         elif etype[1] == 'prod':
-            return x.prod(vars_list=vars_list)
+            fluent = x.prod(vars_list=vars_list)
         elif etype[1] == 'avg':
-            return x.avg(vars_list=vars_list)
+            fluent = x.avg(vars_list=vars_list)
         elif etype[1] == 'maximum':
-            return x.maximum(vars_list=vars_list)
+            fluent = x.maximum(vars_list=vars_list)
         elif etype[1] == 'minimum':
-            return x.minimum(vars_list=vars_list)
+            fluent = x.minimum(vars_list=vars_list)
         elif etype[1] == 'exists':
-            return x.exists(vars_list=vars_list)
+            fluent = x.exists(vars_list=vars_list)
         elif etype[1] == 'forall':
-            return x.forall(vars_list=vars_list)
+            fluent = x.forall(vars_list=vars_list)
+        else:
+            raise ValueError('Invalid aggregation expression {}.'.format(expr))
+
+        log_prob = tf.reduce_sum(log_prob, axis=TensorFluent._varslist2axis(fluent, vars_list))
+
+        return (fluent, log_prob)
 
     @classmethod
     def _range_type_to_dtype(cls, range_type: str) -> Optional[tf.DType]:

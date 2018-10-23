@@ -543,13 +543,7 @@ class TensorFluent(object):
         Returns:
             A TensorFluent wrapping the aggregation operator's output.
         '''
-        axis = []
-        for var in vars_list:
-            if var in x.scope.as_list():
-                ax = x.scope.index(var)
-                if x.batch:
-                    ax += 1
-                axis.append(ax)
+        axis = cls._varslist2axis(x, vars_list)
         t = op(x.tensor, axis)
 
         scope = []
@@ -560,6 +554,28 @@ class TensorFluent(object):
         batch = x.batch
 
         return TensorFluent(t, scope, batch=batch)
+
+    @classmethod
+    def _varslist2axis(cls, fluent: 'TensorFluent', vars_list: List[str]) -> List[int]:
+        '''Maps the `vars_list` into a list of axis indices
+        corresponding to the `fluent` scope.
+
+        Args:
+            x: The fluent.
+            vars_list: The list of variables to be aggregated over.
+
+        Returns:
+            List[int]: a list of axis.
+        '''
+        axis = []
+        for var in vars_list:
+            if var in fluent.scope.as_list():
+                ax = fluent.scope.index(var)
+                if fluent.batch:
+                    ax += 1
+                axis.append(ax)
+        return axis
+
 
     def cast(self, dtype: tf.DType) -> 'TensorFluent':
         '''Returns a TensorFluent for the cast operation with given `dtype`.
