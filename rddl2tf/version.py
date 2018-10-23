@@ -13,5 +13,5 @@
 # You should have received a copy of the GNU General Public License
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
-__version__ = '0.3.4'
-__release__ = 'v0.3.4-alpha'
+__version__ = '0.4.0'
+__release__ = 'v0.4.0-alpha'

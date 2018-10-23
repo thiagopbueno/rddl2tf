@@ -616,6 +616,8 @@ class TensorFluent(object):
         Returns:
             A TensorFluent wrapping the transpose operation.
         '''
+        if permutation == []:
+            return self
         t = tf.transpose(self.tensor, permutation) if permutation != [] else self.tensor
         scope = self.scope.as_list()
         batch = self.batch
