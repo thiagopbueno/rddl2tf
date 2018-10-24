@@ -27,6 +27,7 @@ import tensorflow as tf
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 CPFPair = Tuple[str, TensorFluent]
+CPFTriple = Tuple[str, TensorFluent, TensorFluent]
 FluentList = List[Tuple[str, TensorFluent]]
 Bounds = Tuple[Optional[TensorFluent], Optional[TensorFluent]]
 ObjectStruct = Dict[str, Union[int, Dict[str, int], List[str]]]
@@ -101,7 +102,7 @@ class Compiler(object):
     def compile_cpfs(self,
             scope: Dict[str, TensorFluent],
             batch_size: Optional[int] = None) -> Tuple[List[CPFPair], List[CPFPair]]:
-        '''Compiles the intermediate and next state fluent CPFs.
+        '''Compiles the intermediate and next state fluent CPFs given the current `state` and `action` scope.
 
         Args:
             scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
@@ -116,10 +117,27 @@ class Compiler(object):
         next_state_fluents = self.compile_state_cpfs(scope, batch_size)
         return interm_fluents, next_state_fluents
 
+    def compile_probabilistic_cpfs(self,
+            scope: Dict[str, TensorFluent],
+            batch_size: Optional[int] = None) -> Tuple[List[CPFTriple], List[CPFTriple]]:
+        '''Compiles the intermediate and next state fluent CPFs (with log_prob)
+        given the current `state` and `action` scope.
+
+        Args:
+            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
+            batch_size (Optional[int]): The batch size.
+
+        Returns:
+            (Tuple[List[CPFTriple], List[CPFTriple]]): A pair of lists of (cpf.name, sample, log_prob).
+        '''
+        interm_fluents, scope = self.compile_probabilistic_intermediate_cpfs(scope, batch_size)
+        next_state_fluents = self.compile_probabilistic_state_cpfs(scope, batch_size)
+        return interm_fluents, next_state_fluents
+
     def compile_intermediate_cpfs(self,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None) -> Tuple[List[CPFPair], List[CPFPair]]:
-        '''Compiles the intermediate fluent CPFs.
+            batch_size: Optional[int] = None) -> List[CPFPair]:
+        '''Compiles the intermediate fluent CPFs given the current `state` and `action` scope.
 
         Args:
             scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
@@ -139,9 +157,33 @@ class Compiler(object):
                     scope[cpf.name] = t
                 return interm_fluents
 
+    def compile_probabilistic_intermediate_cpfs(self,
+            scope: Dict[str, TensorFluent],
+            batch_size: Optional[int] = None) -> Tuple[List[CPFTriple], Dict[str, TensorFluent]]:
+        '''Compiles the intermediate fluent CPFs (with log_prob) and returns updated scope
+        given the current `state` and `action` scope.
+
+        Args:
+            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
+            batch_size (Optional[int]): The batch size.
+
+        Returns:
+            (Tuple[List[CPFTriple], Dict[str, TensorFluent]]): A list of (cpf.name, sample, log_prob) and the updated scope.
+        '''
+        interm_fluents = []
+        with self.graph.as_default():
+            with tf.name_scope('intermediate_cpfs'):
+                for cpf in self.rddl.domain.intermediate_cpfs:
+                    name_scope = self._identifier(cpf.name)
+                    with tf.name_scope(name_scope):
+                        fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size)
+                    interm_fluents.append((cpf.name, fluent, log_prob))
+                    scope[cpf.name] = fluent
+                return interm_fluents, scope
+
     def compile_state_cpfs(self,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None) -> Tuple[List[CPFPair], List[CPFPair]]:
+            batch_size: Optional[int] = None) -> List[CPFPair]:
         '''Compiles the next state fluent CPFs given the current `state` and `action` scope.
 
         Args:
@@ -159,6 +201,30 @@ class Compiler(object):
                     with tf.name_scope(name_scope):
                         t = self._compile_expression(cpf.expr, scope, batch_size)
                     next_state_fluents.append((cpf.name, t))
+                key = lambda f: self.next_state_fluent_ordering.index(f[0])
+                next_state_fluents = sorted(next_state_fluents, key=key)
+                return next_state_fluents
+
+    def compile_probabilistic_state_cpfs(self,
+            scope: Dict[str, TensorFluent],
+            batch_size: Optional[int] = None) -> List[CPFTriple]:
+        '''Compiles the next state fluent CPFs given the current `state` and `action` scope.
+
+        Args:
+            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
+            batch_size (Optional[int]): The batch size.
+
+        Returns:
+            (List[CPFTriple]): A list of (cpf.name, sample, log_prob).
+        '''
+        next_state_fluents = []
+        with self.graph.as_default():
+            with tf.name_scope('state_cpfs'):
+                for cpf in self.rddl.domain.state_cpfs:
+                    name_scope = self._identifier(cpf.name)
+                    with tf.name_scope(name_scope):
+                        fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size)
+                    next_state_fluents.append((cpf.name, fluent, log_prob))
                 key = lambda f: self.next_state_fluent_ordering.index(f[0])
                 next_state_fluents = sorted(next_state_fluents, key=key)
                 return next_state_fluents

@@ -599,6 +599,41 @@ class TestCompiler(unittest.TestCase):
             for fluent, expected_fluent in zip(next_state_fluents, expected_state):
                 self.assertEqual(fluent[0], expected_fluent)
 
+    def test_compile_probabilistic_cpfs(self):
+        compilers = [self.compiler1, self.compiler2]
+        expected = [
+            (['evaporated/1', 'overflow/1', 'rainfall/1', 'inflow/1'], ["rlevel'/1"]),
+            ([], ["picTaken'/1", "time'/0", "xPos'/0", "yPos'/0"]),
+        ]
+        for compiler, (expected_interm, expected_state) in zip(compilers, expected):
+            nf = compiler.non_fluents_scope()
+            sf = dict(compiler.initial_state_fluents)
+            af = dict(compiler.default_action_fluents)
+            scope = { **nf, **sf, **af }
+
+            interm_fluents, next_state_fluents = compiler.compile_probabilistic_cpfs(scope)
+
+            self.assertIsInstance(interm_fluents, list)
+            self.assertEqual(len(interm_fluents), len(expected_interm))
+            for fluent, expected_fluent in zip(interm_fluents, expected_interm):
+                self.assertIsInstance(fluent, tuple)
+                self.assertEqual(len(fluent), 3)
+                self.assertEqual(fluent[0], expected_fluent)
+                self.assertIsInstance(fluent[1], TensorFluent)
+                self.assertIsInstance(fluent[2], TensorFluent) #log_prob
+                self.assertListEqual(fluent[1].shape.as_list(), fluent[2].shape.as_list())
+                self.assertListEqual(fluent[2].scope.as_list(), []) #log_prob is scope-less
+
+            self.assertIsInstance(next_state_fluents, list)
+            self.assertEqual(len(next_state_fluents), len(expected_state))
+            for fluent, expected_fluent in zip(next_state_fluents, expected_state):
+                self.assertIsInstance(fluent, tuple)
+                self.assertEqual(len(fluent), 3)
+                self.assertEqual(fluent[0], expected_fluent)
+                self.assertIsInstance(fluent[2], TensorFluent) #log_prob
+                self.assertListEqual(fluent[1].shape.as_list(), fluent[2].shape.as_list())
+                self.assertListEqual(fluent[2].scope.as_list(), []) #log_prob is scope-less
+
     def test_compile_state_cpfs(self):
         compilers = [self.compiler1, self.compiler2]
         for compiler in compilers:
@@ -622,6 +657,34 @@ class TestCompiler(unittest.TestCase):
                 self.assertIn(next_fluent, next_state_fluents)
                 self.assertIsInstance(next_state_fluents[next_fluent], TensorFluent)
 
+    def test_compile_probabilistic_state_cpfs(self):
+        compilers = [self.compiler1, self.compiler2]
+        for compiler in compilers:
+            nf = compiler.non_fluents_scope()
+            sf = dict(compiler.initial_state_fluents)
+            af = dict(compiler.default_action_fluents)
+            scope = { **nf, **sf, **af }
+
+            interm_fluents, new_scope = compiler.compile_probabilistic_intermediate_cpfs(scope)
+            next_state_fluents = compiler.compile_probabilistic_state_cpfs(new_scope)
+
+            self.assertEqual(len(next_state_fluents), len(sf))
+
+            self.assertIsInstance(next_state_fluents, list)
+            for cpf in next_state_fluents:
+                self.assertIsInstance(cpf, tuple)
+                self.assertEqual(len(cpf), 3)
+                self.assertIsInstance(cpf[0], str)
+                self.assertIsInstance(cpf[1], TensorFluent)
+                self.assertIsInstance(cpf[2], TensorFluent) #log_prob
+                self.assertListEqual(cpf[1].shape.as_list(), cpf[2].shape.as_list())
+                self.assertListEqual(cpf[2].scope.as_list(), []) #log_prob is scope-less
+
+            next_state_fluents = set(cpf[0] for cpf in next_state_fluents)
+            for fluent in sf:
+                next_fluent = utils.rename_state_fluent(fluent)
+                self.assertIn(next_fluent, next_state_fluents)
+
     def test_compile_intermediate_cpfs(self):
         compilers = [self.compiler1, self.compiler2]
         expected = [
@@ -641,6 +704,30 @@ class TestCompiler(unittest.TestCase):
                 self.assertEqual(len(actual), 2)
                 self.assertIsInstance(actual[0], str)
                 self.assertIsInstance(actual[1], TensorFluent)
+                self.assertEqual(actual[0], expected)
+
+    def test_compile_probabilistic_intermediate_cpfs(self):
+        compilers = [self.compiler1, self.compiler2]
+        expected = [
+            ['evaporated/1', 'overflow/1', 'rainfall/1', 'inflow/1'],
+            []
+        ]
+        for compiler, fluents in zip(compilers, expected):
+            nf = compiler.non_fluents_scope()
+            sf = dict(compiler.initial_state_fluents)
+            af = dict(compiler.default_action_fluents)
+            scope = { **nf, **sf, **af }
+            interm_fluents, new_scope = compiler.compile_probabilistic_intermediate_cpfs(scope)
+            self.assertIsInstance(interm_fluents, list)
+            self.assertEqual(len(interm_fluents), len(fluents))
+            for actual, expected in zip(interm_fluents, fluents):
+                self.assertIsInstance(actual, tuple)
+                self.assertEqual(len(actual), 3)
+                self.assertIsInstance(actual[0], str)
+                self.assertIsInstance(actual[1], TensorFluent)
+                self.assertIsInstance(actual[2], TensorFluent) #log_prob
+                self.assertListEqual(actual[1].shape.as_list(), actual[2].shape.as_list())
+                self.assertListEqual(actual[2].scope.as_list(), []) #log_prob is scope-less
                 self.assertEqual(actual[0], expected)
 
     def test_compile_reward(self):
