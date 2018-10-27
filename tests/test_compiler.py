@@ -619,10 +619,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(fluent, tuple)
                 self.assertEqual(len(fluent), 3)
                 self.assertEqual(fluent[0], expected_fluent)
-                self.assertIsInstance(fluent[1], TensorFluent)
-                self.assertIsInstance(fluent[2], TensorFluent) #log_prob
-                self.assertListEqual(fluent[1].shape.as_list(), fluent[2].shape.as_list())
-                self.assertListEqual(fluent[2].scope.as_list(), []) #log_prob is scope-less
+                self._test_sample_log_prob_fluents(fluent[1], fluent[2])
 
             self.assertIsInstance(next_state_fluents, list)
             self.assertEqual(len(next_state_fluents), len(expected_state))
@@ -630,9 +627,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(fluent, tuple)
                 self.assertEqual(len(fluent), 3)
                 self.assertEqual(fluent[0], expected_fluent)
-                self.assertIsInstance(fluent[2], TensorFluent) #log_prob
-                self.assertListEqual(fluent[1].shape.as_list(), fluent[2].shape.as_list())
-                self.assertListEqual(fluent[2].scope.as_list(), []) #log_prob is scope-less
+                self._test_sample_log_prob_fluents(fluent[1], fluent[2])
 
     def test_compile_state_cpfs(self):
         compilers = [self.compiler1, self.compiler2]
@@ -742,3 +737,72 @@ class TestCompiler(unittest.TestCase):
             reward = compiler.compile_reward(scope)
             self.assertIsInstance(reward, TensorFluent)
             self.assertEqual(reward.shape.as_list(), [1])
+
+    def test_compile_probabilistic_normal_random_variable(self):
+        mean = Expression(('number', 0.0))
+        var = Expression(('number', 1.0))
+        normal = Expression(('randomvar', ('Normal', (mean, var))))
+
+        expressions = [normal]
+        self._test_random_variable_expressions(expressions)
+
+    def test_compile_probabilistic_gamma_random_variable(self):
+        shape = Expression(('number', 5.0))
+        scale = Expression(('number', 1.0))
+        gamma = Expression(('randomvar', ('Gamma', (shape, scale))))
+
+        expressions = [gamma]
+        self._test_random_variable_expressions(expressions)
+
+    def __get_batch_compiler_with_state_action_scope(self):
+        compilers = [self.compiler2]
+        batch_sizes = [8]
+
+        for compiler, batch_size in zip(compilers, batch_sizes):
+            compiler.batch_mode_on()
+
+            nf = compiler.non_fluents_scope()
+            sf = dict(compiler.initial_state_fluents)
+            af = dict(compiler.default_action_fluents)
+            scope = { **nf, **sf, **af }
+
+            yield (compiler, batch_size, scope)
+
+    def _test_random_variable_expressions(self, expressions):
+        for compiler, batch_size, scope in self.__get_batch_compiler_with_state_action_scope():
+            for expr in expressions:
+                self._test_random_variable_expression(expr, compiler, scope, batch_size)
+
+    def _test_random_variable_expression(self, expr, compiler, scope, batch_size):
+
+        sample, log_prob = compiler._compile_random_variable_expression(expr, scope, batch_size)
+        self._test_sample_log_prob_fluents(sample, log_prob, batch_size)
+        self._test_sample_fluent(sample)
+
+        with compiler.graph.as_default():
+            reparam1 = tf.constant(True, shape=(batch_size,), dtype=bool)
+            reparam2 = tf.constant(False, shape=(batch_size,), dtype=bool)
+            reparams = [reparam1, reparam2]
+
+        for reparam in reparams:
+            sample, log_prob = compiler._compile_random_variable_expression(expr, scope, batch_size, reparam)
+            self._test_sample_log_prob_fluents(sample, log_prob, batch_size)
+            self._test_conditional_sample(sample)
+
+    def _test_sample_log_prob_fluents(self, sample, log_prob, batch_size=None):
+        self.assertIsInstance(log_prob, TensorFluent)
+        self.assertIsInstance(sample, TensorFluent)
+        if batch_size is not None:
+            self.assertEqual(sample.shape[0], batch_size)
+        self.assertListEqual(sample.shape.as_list(), log_prob.shape.as_list())
+        self.assertListEqual(log_prob.scope.as_list(), [])
+
+    def _test_sample_fluent(self, sample):
+        self.assertTrue(sample.tensor.name.startswith('sample'), sample.tensor)
+
+    def _test_conditional_sample(self, sample):
+        inputs = sample.tensor.op.inputs
+        self.assertEqual(len(inputs), 3)
+        self.assertTrue(inputs[0].name.startswith('LogicalNot'), inputs[0])
+        self.assertTrue(inputs[1].name.startswith('StopGradient'), inputs[1])
+        self.assertTrue(inputs[2].name.startswith('sample'), inputs[2])

@@ -119,7 +119,8 @@ class Compiler(object):
 
     def compile_probabilistic_cpfs(self,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None) -> Tuple[List[CPFTriple], List[CPFTriple]]:
+            batch_size: Optional[int] = None,
+            reparam: Optional[tf.Tensor] = None) -> Tuple[List[CPFTriple], List[CPFTriple]]:
         '''Compiles the intermediate and next state fluent CPFs (with log_prob)
         given the current `state` and `action` scope.
 
@@ -130,8 +131,8 @@ class Compiler(object):
         Returns:
             (Tuple[List[CPFTriple], List[CPFTriple]]): A pair of lists of (cpf.name, sample, log_prob).
         '''
-        interm_fluents, scope = self.compile_probabilistic_intermediate_cpfs(scope, batch_size)
-        next_state_fluents = self.compile_probabilistic_state_cpfs(scope, batch_size)
+        interm_fluents, scope = self.compile_probabilistic_intermediate_cpfs(scope, batch_size, reparam)
+        next_state_fluents = self.compile_probabilistic_state_cpfs(scope, batch_size, reparam)
         return interm_fluents, next_state_fluents
 
     def compile_intermediate_cpfs(self,
@@ -159,7 +160,8 @@ class Compiler(object):
 
     def compile_probabilistic_intermediate_cpfs(self,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None) -> Tuple[List[CPFTriple], Dict[str, TensorFluent]]:
+            batch_size: Optional[int] = None,
+            reparam: Optional[tf.Tensor] = None) -> Tuple[List[CPFTriple], Dict[str, TensorFluent]]:
         '''Compiles the intermediate fluent CPFs (with log_prob) and returns updated scope
         given the current `state` and `action` scope.
 
@@ -176,7 +178,7 @@ class Compiler(object):
                 for cpf in self.rddl.domain.intermediate_cpfs:
                     name_scope = self._identifier(cpf.name)
                     with tf.name_scope(name_scope):
-                        fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size)
+                        fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size, reparam)
                     interm_fluents.append((cpf.name, fluent, log_prob))
                     scope[cpf.name] = fluent
                 return interm_fluents, scope
@@ -207,7 +209,8 @@ class Compiler(object):
 
     def compile_probabilistic_state_cpfs(self,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None) -> List[CPFTriple]:
+            batch_size: Optional[int] = None,
+            reparam: Optional[tf.Tensor] = None) -> List[CPFTriple]:
         '''Compiles the next state fluent CPFs given the current `state` and `action` scope.
 
         Args:
@@ -223,7 +226,7 @@ class Compiler(object):
                 for cpf in self.rddl.domain.state_cpfs:
                     name_scope = self._identifier(cpf.name)
                     with tf.name_scope(name_scope):
-                        fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size)
+                        fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size, reparam)
                     next_state_fluents.append((cpf.name, fluent, log_prob))
                 key = lambda f: self.next_state_fluent_ordering.index(f[0])
                 next_state_fluents = sorted(next_state_fluents, key=key)
@@ -958,14 +961,20 @@ class Compiler(object):
     def _compile_probabilistic_expression(self,
             expr: Expression,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None) -> TensorFluent:
+            batch_size: Optional[int] = None,
+            reparam: Optional[tf.Tensor] = None) -> TensorFluent:
         '''Compile the expression `expr` into a TensorFluent as a
         probabilistic sample in the given `scope` with optional batch size.
+
+        If `reparam` tensor is given, then it conditionally stops gradient
+        backpropagation at the batch level where `reparam` is False for samples
+        in random variable expressions.
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL expression.
             scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
+            reparam (Optional[tf.Tensor]): A boolean tf.Tensor with shape=(batch_size, ...).
 
         Returns:
             (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
@@ -979,7 +988,7 @@ class Compiler(object):
             elif etype[0] == 'pvar':
                 return self._compile_pvariable_expression(expr, scope, batch_size)
             elif etype[0] == 'randomvar':
-                return self._compile_random_variable_expression(expr, scope, batch_size)
+                return self._compile_random_variable_expression(expr, scope, batch_size, reparam)
             elif etype[0] == 'arithmetic':
                 return self._compile_arithmetic_expression(expr, scope, batch_size)
             elif etype[0] == 'boolean':
@@ -1072,18 +1081,28 @@ class Compiler(object):
     def _compile_random_variable_expression(self,
             expr: Expression,
             scope: Dict[str, TensorFluent],
-            batch_size: Optional[int] = None) -> TensorFluent:
+            batch_size: Optional[int] = None,
+            reparam: Optional[tf.Tensor] = None) -> TensorFluent:
         '''Compile a random variable expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
+
+        If `reparam` tensor is given, then it conditionally stops gradient
+        backpropagation at the batch level where `reparam` is False.
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL random variable expression.
             scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
+            reparam (Optional[tf.Tensor]): A boolean tf.Tensor with shape=(batch_size, ...).
 
         Returns:
             (:obj:`rddl2tf.fluent.TensorFluent`, :obj:`tf.Tensor`): A pair (sample, log_prob).
         '''
+        if batch_size is not None and reparam is not None:
+            assert batch_size == reparam.shape[0]
+        elif batch_size is None and reparam is not None:
+            assert reparam.shape[0] == 1
+
         etype = expr.etype
         args = expr.args
 
@@ -1125,6 +1144,10 @@ class Compiler(object):
             log_prob = mean_log_prob + sample_log_prob
         else:
             raise ValueError('Invalid random variable expression:\n{}.'.format(expr))
+
+        if reparam is not None:
+            sample = TensorFluent.stop_batch_gradient(sample, ~reparam)
+
         return (sample, log_prob)
 
     def _compile_arithmetic_expression(self,
