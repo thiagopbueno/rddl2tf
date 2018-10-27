@@ -253,6 +253,36 @@ class TensorFluent(object):
         return (dist, TensorFluent(t, scope, batch=batch))
 
     @classmethod
+    def stop_gradient(cls, x: 'TensorFluent') -> 'TensorFluent':
+        '''Returns a copy of the input fluent with stop_gradient at tensor level.
+
+        Args:
+            x: The input fluent.
+
+        Returns:
+            A TensorFluent that stops backpropagation of gradient computations.
+        '''
+        scope = x.scope.as_list()
+        batch = x.batch
+        return TensorFluent(tf.stop_gradient(x.tensor), scope, batch)
+
+    @classmethod
+    def stop_batch_gradient(cls, x: 'TensorFluent', stop_batch: tf.Tensor) -> 'TensorFluent':
+        '''Returns a copy of the inputs fluent with stop_gradient applied at batch level.
+
+        Args:
+            x: The input fluent.
+            stop_batch: A boolean tf.Tensor with shape=(batch_size, ...)
+
+        Returns:
+            A TensorFluent that conditionally stops backpropagation of gradient computations.
+        '''
+        scope = x.scope.as_list()
+        batch = x.batch
+        tensor = tf.where(stop_batch, tf.stop_gradient(x.tensor), x.tensor)
+        return TensorFluent(tensor, scope, batch)
+
+    @classmethod
     def abs(cls, x: 'TensorFluent') -> 'TensorFluent':
         '''Returns a TensorFluent for the abs function.
 
