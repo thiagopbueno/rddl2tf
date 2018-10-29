@@ -671,9 +671,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertEqual(len(cpf), 3)
                 self.assertIsInstance(cpf[0], str)
                 self.assertIsInstance(cpf[1], TensorFluent)
-                self.assertIsInstance(cpf[2], TensorFluent) #log_prob
-                self.assertListEqual(cpf[1].shape.as_list(), cpf[2].shape.as_list())
-                self.assertListEqual(cpf[2].scope.as_list(), []) #log_prob is scope-less
+                self._test_sample_log_prob_fluents(cpf[1], cpf[2])
 
             next_state_fluents = set(cpf[0] for cpf in next_state_fluents)
             for fluent in sf:
@@ -719,11 +717,9 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(actual, tuple)
                 self.assertEqual(len(actual), 3)
                 self.assertIsInstance(actual[0], str)
-                self.assertIsInstance(actual[1], TensorFluent)
-                self.assertIsInstance(actual[2], TensorFluent) #log_prob
-                self.assertListEqual(actual[1].shape.as_list(), actual[2].shape.as_list())
-                self.assertListEqual(actual[2].scope.as_list(), []) #log_prob is scope-less
                 self.assertEqual(actual[0], expected)
+                self.assertIsInstance(actual[1], TensorFluent)
+                self._test_sample_log_prob_fluents(actual[1], actual[2])
 
     def test_compile_reward(self):
         compilers = [self.compiler1, self.compiler2]
@@ -790,12 +786,13 @@ class TestCompiler(unittest.TestCase):
             self._test_conditional_sample(sample)
 
     def _test_sample_log_prob_fluents(self, sample, log_prob, batch_size=None):
-        self.assertIsInstance(log_prob, TensorFluent)
         self.assertIsInstance(sample, TensorFluent)
         if batch_size is not None:
             self.assertEqual(sample.shape[0], batch_size)
-        self.assertListEqual(sample.shape.as_list(), log_prob.shape.as_list())
-        self.assertListEqual(log_prob.scope.as_list(), [])
+        if log_prob is not None:
+            self.assertIsInstance(log_prob, TensorFluent)
+            self.assertListEqual(sample.shape.as_list(), log_prob.shape.as_list())
+            self.assertListEqual(log_prob.scope.as_list(), [])
 
     def _test_sample_fluent(self, sample):
         self.assertTrue(sample.tensor.name.startswith('sample'), sample.tensor)

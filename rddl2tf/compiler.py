@@ -1044,7 +1044,7 @@ class Compiler(object):
         args = expr.args
         dtype = self._python_type_to_dtype(etype[1])
         fluent = TensorFluent.constant(args, dtype=dtype)
-        log_prob = self._deterministic_log_prob(fluent)
+        log_prob = None
         return (fluent, log_prob)
 
     def _compile_pvariable_expression(self,
@@ -1075,7 +1075,7 @@ class Compiler(object):
             fluent = TensorFluent(fluent, scope, batch=self.batch_mode)
         else:
             raise ValueError('Variable in scope must be TensorFluent-like: {}'.format(fluent))
-        log_prob = self._deterministic_log_prob(fluent)
+        log_prob = None
         return (fluent, log_prob)
 
     def _compile_random_variable_expression(self,
@@ -1112,36 +1112,36 @@ class Compiler(object):
             mean, mean_log_prob = self._compile_probabilistic_expression(args[0], scope)
             dist, sample = TensorFluent.Bernoulli(mean, batch_size)
             sample_log_prob = self._sample_log_prob(dist, sample)
-            log_prob = mean_log_prob + sample_log_prob
+            log_prob = self._sum_log_probs(mean_log_prob, sample_log_prob)
         elif etype[1] == 'Uniform':
             low, low_log_prob = self._compile_probabilistic_expression(args[0], scope)
             high, high_log_prob = self._compile_probabilistic_expression(args[1], scope)
             dist, sample = TensorFluent.Uniform(low, high, batch_size)
             sample_log_prob = self._sample_log_prob(dist, sample)
-            log_prob = low_log_prob + high_log_prob + sample_log_prob
+            log_prob = self._sum_log_probs(low_log_prob, high_log_prob, sample_log_prob)
         elif etype[1] == 'Normal':
             mean, mean_log_prob = self._compile_probabilistic_expression(args[0], scope)
             variance, variance_log_prob = self._compile_probabilistic_expression(args[1], scope)
             dist, sample = TensorFluent.Normal(mean, variance, batch_size)
             sample_log_prob = self._sample_log_prob(dist, sample)
-            log_prob = mean_log_prob + variance_log_prob + sample_log_prob
+            log_prob = self._sum_log_probs(mean_log_prob, variance_log_prob, sample_log_prob)
         elif etype[1] == 'Laplace':
             mean, mean_log_prob = self._compile_probabilistic_expression(args[0], scope)
             variance, variance_log_prob = self._compile_probabilistic_expression(args[1], scope)
             dist, sample = TensorFluent.Laplace(mean, variance, batch_size)
             sample_log_prob = self._sample_log_prob(dist, sample)
-            log_prob = mean_log_prob + variance_log_prob + sample_log_prob
+            log_prob = self._sum_log_probs(mean_log_prob, variance_log_prob, sample_log_prob)
         elif etype[1] == 'Gamma':
             shape, shape_log_prob = self._compile_probabilistic_expression(args[0], scope)
             scale, scale_log_prob = self._compile_probabilistic_expression(args[1], scope)
             dist, sample = TensorFluent.Gamma(shape, scale, batch_size)
             sample_log_prob = self._sample_log_prob(dist, sample)
-            log_prob = shape_log_prob + scale_log_prob + sample_log_prob
+            log_prob = self._sum_log_probs(shape_log_prob, scale_log_prob, sample_log_prob)
         elif etype[1] == 'Exponential':
             mean, mean_log_prob = self._compile_probabilistic_expression(args[0], scope)
             dist, sample = TensorFluent.Exponential(mean, batch_size)
             sample_log_prob = self._sample_log_prob(dist, sample)
-            log_prob = mean_log_prob + sample_log_prob
+            log_prob = self._sum_log_probs(mean_log_prob, sample_log_prob)
         else:
             raise ValueError('Invalid random variable expression:\n{}.'.format(expr))
 
@@ -1196,7 +1196,7 @@ class Compiler(object):
             else:
                 raise ValueError('Invalid binary arithmetic expression:\n{}'.format(expr))
 
-            log_prob = op1_log_prob + op2_log_prob
+            log_prob = self._sum_log_probs(op1_log_prob, op2_log_prob)
 
         return (fluent, log_prob)
 
@@ -1244,7 +1244,7 @@ class Compiler(object):
             else:
                 raise ValueError('Invalid binary boolean expression:\n{}'.format(expr))
 
-            log_prob = op1_log_prob + op2_log_prob
+            log_prob = self._sum_log_probs(op1_log_prob, op2_log_prob)
 
         return (fluent, log_prob)
 
@@ -1293,7 +1293,7 @@ class Compiler(object):
         else:
             raise ValueError('Invalid relational expression:\n{}'.format(expr))
 
-        log_prob = op1_log_prob + op2_log_prob
+        log_prob = self._sum_log_probs(op1_log_prob, op2_log_prob)
 
         return (fluent, log_prob)
 
@@ -1361,7 +1361,7 @@ class Compiler(object):
             else:
                 raise ValueError('Invalid binary function expression:\n{}'.format(expr))
 
-            log_prob = x_log_prob + y_log_prob
+            log_prob = self._sum_log_probs(x_log_prob, y_log_prob)
 
         return (fluent, log_prob)
 
@@ -1387,7 +1387,7 @@ class Compiler(object):
             true_case, true_case_log_prob = self._compile_probabilistic_expression(args[1], scope)
             false_case, false_case_log_prob = self._compile_probabilistic_expression(args[2], scope)
             fluent = TensorFluent.if_then_else(condition, true_case, false_case)
-            log_prob = self._condition_log_prob(condition, condition_log_prob, true_case_log_prob, false_case_log_prob)
+            log_prob = self._condition_log_prob(condition, true_case, false_case, condition_log_prob, true_case_log_prob, false_case_log_prob)
         else:
             raise ValueError('Invalid control flow expression:\n{}'.format(expr))
 
@@ -1467,13 +1467,6 @@ class Compiler(object):
         return name
 
     @classmethod
-    def _deterministic_log_prob(cls, fluent):
-        tensor = tf.constant(0.0, shape=fluent.shape._shape)
-        scope = []
-        batch = fluent.batch
-        return TensorFluent(tensor, scope, batch)
-
-    @classmethod
     def _sample_log_prob(cls, dist, sample):
         tensor = dist.log_prob(tf.stop_gradient(sample.tensor))
         scope = []
@@ -1481,17 +1474,48 @@ class Compiler(object):
         return TensorFluent(tensor, scope, batch)
 
     @classmethod
-    def _condition_log_prob(cls, condition, condition_log_prob, true_case_log_prob, false_case_log_prob):
+    def _deterministic_log_prob(cls, fluent):
+        tensor = tf.constant(0.0, shape=fluent.shape._shape)
+        scope = []
+        batch = fluent.batch
+        return TensorFluent(tensor, scope, batch)
+
+    @classmethod
+    def _sum_log_probs(cls, *args):
+        total_log_prob = None
+        for arg in args:
+            if arg is not None:
+                if total_log_prob is None:
+                    total_log_prob = arg
+                else:
+                    total_log_prob += arg
+        return total_log_prob
+
+    @classmethod
+    def _condition_log_prob(cls, condition, true_case, false_case, condition_log_prob, true_case_log_prob, false_case_log_prob):
+        if condition_log_prob is None and true_case_log_prob is None and false_case_log_prob is None:
+            return None
+
+        true_total_log_prob = cls._sum_log_probs(condition_log_prob, true_case_log_prob)
+        if true_total_log_prob is None:
+            true_total_log_prob = cls._deterministic_log_prob(true_case)
+
+        false_total_log_prob = cls._sum_log_probs(condition_log_prob, false_case_log_prob)
+        if false_total_log_prob is None:
+            false_total_log_prob = cls._deterministic_log_prob(false_case)
+
         tensor = tf.where(
                     condition.tensor,
-                    (condition_log_prob + true_case_log_prob).tensor,
-                    (condition_log_prob + false_case_log_prob).tensor)
+                    (true_total_log_prob).tensor,
+                    (false_total_log_prob).tensor)
         scope = []
         batch = condition.batch
         return TensorFluent(tensor, scope, batch)
 
     @classmethod
     def _aggregation_log_prob(cls, log_prob, fluent, vars_list):
+        if log_prob is None:
+            return None
         axis = TensorFluent._varslist2axis(fluent, vars_list)
         tensor = tf.reduce_sum(log_prob.tensor, axis=axis)
         scope = []
