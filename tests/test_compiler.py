@@ -35,9 +35,13 @@ class TestCompiler(unittest.TestCase):
         self.rddl1 = rddlgym.make('Reservoir-8', mode=rddlgym.AST)
         self.rddl2 = rddlgym.make('Mars_Rover', mode=rddlgym.AST)
         self.rddl3 = rddlgym.make('HVAC-v1', mode=rddlgym.AST)
+        self.rddl4 = rddlgym.make('CrossingTraffic-10', mode=rddlgym.AST)
+        self.rddl5 = rddlgym.make('GameOfLife-10', mode=rddlgym.AST)
         self.compiler1 = Compiler(self.rddl1)
         self.compiler2 = Compiler(self.rddl2)
         self.compiler3 = Compiler(self.rddl3)
+        self.compiler4 = Compiler(self.rddl4)
+        self.compiler5 = Compiler(self.rddl5)
 
     def test_build_object_table(self):
         self.assertIn('res', self.compiler1.object_table)
@@ -85,6 +89,27 @@ class TestCompiler(unittest.TestCase):
         self.assertIsInstance(upper, Expression)
         self.assertTrue(upper.is_pvariable_expression())
         self.assertEqual(upper.name, 'rlevel/1')
+
+    def test_compile_state_action_constraints(self):
+        batch_size = 1000
+        compilers = [self.compiler4, self.compiler5]
+        expected_preconds = [(12, [True] + [False] * 11), (1, [False])]
+        for compiler, expected in zip(compilers, expected_preconds):
+            compiler.batch_mode_on()
+            state = compiler.compile_initial_state(batch_size)
+            action = compiler.compile_default_action(batch_size)
+            constraints = compiler.compile_state_action_constraints(state, action)
+            self.assertIsInstance(constraints, list)
+            self.assertEqual(len(constraints), expected[0])
+            for c, batch_mode in zip(constraints, expected[1]):
+                self.assertIsInstance(c, TensorFluent)
+                self.assertEqual(c.dtype, tf.bool)
+                if batch_mode:
+                    self.assertEqual(c.shape.batch_size, batch_size)
+                else:
+                    self.assertEqual(c.shape.batch_size, 1)
+                self.assertEqual(c.shape.batch, batch_mode)
+                self.assertTupleEqual(c.shape.fluent_shape, (1,))
 
     def test_compile_action_preconditions(self):
         batch_size = 1000

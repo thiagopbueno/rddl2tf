@@ -248,6 +248,31 @@ class Compiler(object):
                 tensor = tf.expand_dims(t.tensor, -1)
                 return TensorFluent(tensor, t.scope[:], t.batch)
 
+    def compile_state_action_constraints(self,
+            state: Sequence[tf.Tensor],
+            action: Sequence[tf.Tensor]) -> List[TensorFluent]:
+        '''Compiles the state-action constraints given current `state` and `action` fluents.
+
+        Args:
+            state (Sequence[tf.Tensor]): The current state fluents.
+            action (Sequence[tf.Tensor]): The action fluents.
+
+        Returns:
+            A list of :obj:`rddl2tf.fluent.TensorFluent`.
+        '''
+        scope = self.transition_scope(state, action)
+        constraints = []
+        with self.graph.as_default():
+            with tf.name_scope('state_action_constraints'):
+                for p in self.state_action_constraints:
+                    t = self._compile_expression(p, scope)
+                    tensor = t.tensor
+                    if t.shape.fluent_shape == ():
+                        tensor = tf.expand_dims(tensor, -1)
+                    fluent = TensorFluent(tensor, t.scope[:], t.batch)
+                    constraints.append(fluent)
+                return constraints
+
     def compile_action_preconditions(self,
             state: Sequence[tf.Tensor],
             action: Sequence[tf.Tensor]) -> List[TensorFluent]:
@@ -486,6 +511,14 @@ class Compiler(object):
         if self.__dict__.get('_default_action_fluents') is None:
             self._instantiate_default_action_fluents()
         return self._default_action_fluents
+
+    @property
+    def state_action_constraints(self) -> Dict[str, List[Expression]]:
+        '''The state-action constraint expressions.
+
+        Returns:
+            Dict[str, List[Expression]]: A mapping from fluent name to a list of Expressions.'''
+        return self.rddl.domain.constraints
 
     @property
     def action_preconditions(self) -> Dict[str, List[Expression]]:
