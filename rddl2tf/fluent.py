@@ -367,6 +367,42 @@ class TensorFluent(object):
         return cls._unary_op(x, tf.tan, tf.float32)
 
     @classmethod
+    def acos(cls, x: 'TensorFluent') -> 'TensorFluent':
+        '''Returns a TensorFluent for the arccos function.
+
+        Args:
+            x: The input fluent.
+
+        Returns:
+            A TensorFluent wrapping the arccos function.
+        '''
+        return cls._unary_op(x, tf.acos, tf.float32)
+
+    @classmethod
+    def asin(cls, x: 'TensorFluent') -> 'TensorFluent':
+        '''Returns a TensorFluent for the arcsin function.
+
+        Args:
+            x: The input fluent.
+
+        Returns:
+            A TensorFluent wrapping the arcsin function.
+        '''
+        return cls._unary_op(x, tf.asin, tf.float32)
+
+    @classmethod
+    def atan(cls, x: 'TensorFluent') -> 'TensorFluent':
+        '''Returns a TensorFluent for the arctan function.
+
+        Args:
+            x: The input fluent.
+
+        Returns:
+            A TensorFluent wrapping the arctan function.
+        '''
+        return cls._unary_op(x, tf.atan2, tf.float32)
+
+    @classmethod
     def round(cls, x: 'TensorFluent') -> 'TensorFluent':
         '''Returns a TensorFluent for the round function.
 

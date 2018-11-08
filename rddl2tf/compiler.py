@@ -1367,6 +1367,18 @@ class Compiler(object):
             elif etype[1] == 'sin':
                 x, log_prob = self._compile_probabilistic_expression(args[0], scope)
                 fluent = TensorFluent.sin(x)
+            elif etype[1] == 'tan':
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.tan(x)
+            elif etype[1] in ['acos', 'arccos']:
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.acos(x)
+            elif etype[1] in ['asin', 'arcsin']:
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.asin(x)
+            elif etype[1] in ['atan', 'arctan']:
+                x, log_prob = self._compile_probabilistic_expression(args[0], scope)
+                fluent = TensorFluent.atan(x)
             elif etype[1] == 'round':
                 x, log_prob = self._compile_probabilistic_expression(args[0], scope)
                 fluent = TensorFluent.round(x)
