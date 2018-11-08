@@ -657,6 +657,8 @@ class Compiler(object):
         for name in self.interm_fluent_ordering:
             fluent = interm_fluents[name]
             shape = self._param_types_to_shape(fluent.param_types)
+            if shape == ():
+                shape = (1,)
             shapes.append(shape)
         return tuple(shapes)
 
