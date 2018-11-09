@@ -37,11 +37,15 @@ class TestCompiler(unittest.TestCase):
         self.rddl3 = rddlgym.make('HVAC-v1', mode=rddlgym.AST)
         self.rddl4 = rddlgym.make('CrossingTraffic-10', mode=rddlgym.AST)
         self.rddl5 = rddlgym.make('GameOfLife-10', mode=rddlgym.AST)
+        self.rddl6 = rddlgym.make('CarParking-v1', mode=rddlgym.AST)
+        self.rddl7 = rddlgym.make('Navigation-v3', mode=rddlgym.AST)
         self.compiler1 = Compiler(self.rddl1)
         self.compiler2 = Compiler(self.rddl2)
         self.compiler3 = Compiler(self.rddl3)
         self.compiler4 = Compiler(self.rddl4)
         self.compiler5 = Compiler(self.rddl5)
+        self.compiler6 = Compiler(self.rddl6)
+        self.compiler7 = Compiler(self.rddl7)
 
     def test_build_object_table(self):
         self.assertIn('res', self.compiler1.object_table)
@@ -109,7 +113,7 @@ class TestCompiler(unittest.TestCase):
                 else:
                     self.assertEqual(c.shape.batch_size, 1)
                 self.assertEqual(c.shape.batch, batch_mode)
-                self.assertTupleEqual(c.shape.fluent_shape, (1,))
+                self.assertTupleEqual(c.shape.fluent_shape, ())
 
     def test_compile_action_preconditions(self):
         batch_size = 1000
@@ -127,7 +131,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertEqual(p.dtype, tf.bool)
                 self.assertEqual(p.shape.batch_size, batch_size)
                 self.assertTrue(p.shape.batch)
-                self.assertTupleEqual(p.shape.fluent_shape, (1,))
+                self.assertTupleEqual(p.shape.fluent_shape, ())
 
     def test_compile_state_invariants(self):
         batch_size = 1000
@@ -142,7 +146,7 @@ class TestCompiler(unittest.TestCase):
             for p in invariants:
                 self.assertIsInstance(p, TensorFluent)
                 self.assertEqual(p.dtype, tf.bool)
-                self.assertTupleEqual(p.shape.fluent_shape, (1,))
+                self.assertTupleEqual(p.shape.fluent_shape, ())
 
     def test_compile_action_preconditions_checking(self):
         batch_size = 1000
@@ -341,7 +345,7 @@ class TestCompiler(unittest.TestCase):
                     self.assertAlmostEqual(v1, v2)
 
     def test_non_fluent_ordering(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             non_fluents = dict(compiler.non_fluents)
             action_fluent_ordering = compiler.non_fluent_ordering
@@ -350,7 +354,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertIn(action_fluent, non_fluents)
 
     def test_state_fluent_ordering(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             initial_state_fluents = dict(compiler.initial_state_fluents)
             current_state_ordering = compiler.state_fluent_ordering
@@ -376,7 +380,7 @@ class TestCompiler(unittest.TestCase):
             self.assertListEqual(interm_fluent_ordering, expected_ordering)
 
     def test_action_fluent_ordering(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             default_action_fluents = dict(compiler.default_action_fluents)
             action_fluent_ordering = compiler.action_fluent_ordering
@@ -442,8 +446,9 @@ class TestCompiler(unittest.TestCase):
                 self.assertListEqual(actual_variables, expected_variables[name])
 
     def test_state_size(self):
-        compilers = [self.compiler1, self.compiler2]
-        for compiler in compilers:
+        # TODO self.compiler4
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler5, self.compiler6, self.compiler7]
+        for i, compiler in enumerate(compilers):
             state_size = compiler.state_size
             initial_state_fluents = dict(compiler.initial_state_fluents)
             state_fluent_ordering = compiler.state_fluent_ordering
@@ -459,8 +464,6 @@ class TestCompiler(unittest.TestCase):
             for shape, name in zip(state_size, state_fluent_ordering):
                 actual = list(shape)
                 expected = initial_state_fluents[name].shape.as_list()
-                if expected == []:
-                    expected = [1]
                 self.assertListEqual(actual, expected)
 
             nf = compiler.non_fluents_scope()
@@ -475,12 +478,10 @@ class TestCompiler(unittest.TestCase):
             for shape, name in zip(state_size, next_state_fluent_ordering):
                 actual = list(shape)
                 expected = next_state_fluents[name].shape.as_list()
-                if expected == []:
-                    expected = [1]
                 self.assertListEqual(actual, expected)
 
     def test_action_size(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             action_size = compiler.action_size
             default_action_fluents = dict(compiler.default_action_fluents)
@@ -492,7 +493,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(shape, tuple)
 
     def test_interm_size(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             interm_size = compiler.interm_size
             interm_ordering = compiler.interm_fluent_ordering
@@ -502,7 +503,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(shape, tuple)
 
     def test_state_dtype(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             state_dtype = compiler.state_dtype
             initial_state_fluents = compiler.initial_state_fluents
@@ -515,7 +516,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertEqual(dtype, initial_state_fluents[i][1].dtype)
 
     def test_interm_dtype(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             interm_dtype = compiler.interm_dtype
             interm_ordering = compiler.interm_fluent_ordering
@@ -525,7 +526,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(dtype, tf.DType)
 
     def test_action_dtype(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             action_dtype = compiler.action_dtype
             default_action_fluents = compiler.default_action_fluents
@@ -538,7 +539,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertEqual(dtype, default_action_fluents[i][1].dtype)
 
     def test_state_scope(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             fluents = compiler.initial_state_fluents
             scope = dict(fluents)
@@ -546,8 +547,8 @@ class TestCompiler(unittest.TestCase):
             for i, name in enumerate(compiler.state_fluent_ordering):
                 self.assertIs(scope[name], fluents[i][1])
 
-    def test_state_scope(self):
-        compilers = [self.compiler1, self.compiler2]
+    def test_action_scope(self):
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             fluents = compiler.default_action_fluents
             scope = dict(fluents)
@@ -655,7 +656,7 @@ class TestCompiler(unittest.TestCase):
                 self._test_sample_log_prob_fluents(fluent[1], fluent[2])
 
     def test_compile_state_cpfs(self):
-        compilers = [self.compiler1, self.compiler2]
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             nf = compiler.non_fluents_scope()
             sf = dict(compiler.initial_state_fluents)
@@ -678,17 +679,22 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(next_state_fluents[next_fluent], TensorFluent)
 
     def test_compile_probabilistic_state_cpfs(self):
-        compilers = [self.compiler1, self.compiler2]
+        # TO DO self.compiler4, self.compiler5
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler6, self.compiler7]
+
+        batch_size = 64
+
         for compiler in compilers:
-            nf = compiler.non_fluents_scope()
-            sf = dict(compiler.initial_state_fluents)
-            af = dict(compiler.default_action_fluents)
-            scope = { **nf, **sf, **af }
+            compiler.batch_mode_on()
+
+            state = compiler.compile_initial_state(batch_size)
+            action = compiler.compile_default_action(batch_size)
+            scope = compiler.transition_scope(state, action)
 
             interm_fluents, new_scope = compiler.compile_probabilistic_intermediate_cpfs(scope)
             next_state_fluents = compiler.compile_probabilistic_state_cpfs(new_scope)
 
-            self.assertEqual(len(next_state_fluents), len(sf))
+            self.assertEqual(len(next_state_fluents), len(state))
 
             self.assertIsInstance(next_state_fluents, list)
             for cpf in next_state_fluents:
@@ -699,17 +705,15 @@ class TestCompiler(unittest.TestCase):
                 self._test_sample_log_prob_fluents(cpf[1], cpf[2])
 
             next_state_fluents = set(cpf[0] for cpf in next_state_fluents)
-            for fluent in sf:
+            for fluent in compiler.state_fluent_ordering:
                 next_fluent = utils.rename_state_fluent(fluent)
                 self.assertIn(next_fluent, next_state_fluents)
 
     def test_compile_intermediate_cpfs(self):
-        compilers = [self.compiler1, self.compiler2]
-        expected = [
-            ['evaporated/1', 'overflow/1', 'rainfall/1', 'inflow/1'],
-            []
-        ]
-        for compiler, fluents in zip(compilers, expected):
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
+        for compiler in compilers:
+            fluents = compiler.interm_fluent_ordering
+
             nf = compiler.non_fluents_scope()
             sf = dict(compiler.initial_state_fluents)
             af = dict(compiler.default_action_fluents)
@@ -725,16 +729,18 @@ class TestCompiler(unittest.TestCase):
                 self.assertEqual(actual[0], expected)
 
     def test_compile_probabilistic_intermediate_cpfs(self):
-        compilers = [self.compiler1, self.compiler2]
-        expected = [
-            ['evaporated/1', 'overflow/1', 'rainfall/1', 'inflow/1'],
-            []
-        ]
-        for compiler, fluents in zip(compilers, expected):
-            nf = compiler.non_fluents_scope()
-            sf = dict(compiler.initial_state_fluents)
-            af = dict(compiler.default_action_fluents)
-            scope = { **nf, **sf, **af }
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
+
+        batch_size = 128
+        for compiler in compilers:
+            compiler.batch_mode_on()
+
+            fluents = compiler.interm_fluent_ordering
+
+            state = compiler.compile_initial_state(batch_size)
+            action = compiler.compile_default_action(batch_size)
+            scope = compiler.transition_scope(state, action)
+
             interm_fluents, new_scope = compiler.compile_probabilistic_intermediate_cpfs(scope)
             self.assertIsInstance(interm_fluents, list)
             self.assertEqual(len(interm_fluents), len(fluents))
@@ -747,17 +753,19 @@ class TestCompiler(unittest.TestCase):
                 self._test_sample_log_prob_fluents(actual[1], actual[2])
 
     def test_compile_reward(self):
-        compilers = [self.compiler1, self.compiler2]
+        # TO DO self.compiler4, self.compiler5
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler6, self.compiler7]
+        batch_size = 32
         for compiler in compilers:
-            nf = compiler.non_fluents_scope()
-            sf = dict(compiler.initial_state_fluents)
-            af = dict(compiler.default_action_fluents)
-            scope = { **nf, **sf, **af }
+            compiler.batch_mode_on()
+            state = compiler.compile_initial_state(batch_size)
+            action = compiler.compile_default_action(batch_size)
+            scope = compiler.transition_scope(state, action)
             interm_fluents, next_state_fluents = compiler.compile_cpfs(scope)
-            scope.update(dict(next_state_fluents))
+            scope.update(next_state_fluents)
             reward = compiler.compile_reward(scope)
             self.assertIsInstance(reward, TensorFluent)
-            self.assertEqual(reward.shape.as_list(), [1])
+            self.assertEqual(reward.shape.as_list(), [batch_size])
 
     def test_compile_probabilistic_normal_random_variable(self):
         mean = Expression(('number', 0.0))

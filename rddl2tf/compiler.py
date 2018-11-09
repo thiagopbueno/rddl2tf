@@ -244,9 +244,7 @@ class Compiler(object):
         reward_expr = self.rddl.domain.reward
         with self.graph.as_default():
             with tf.name_scope('reward'):
-                t = self._compile_expression(reward_expr, scope)
-                tensor = tf.expand_dims(t.tensor, -1)
-                return TensorFluent(tensor, t.scope[:], t.batch)
+                return self._compile_expression(reward_expr, scope)
 
     def compile_state_action_constraints(self,
             state: Sequence[tf.Tensor],
@@ -265,11 +263,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('state_action_constraints'):
                 for p in self.state_action_constraints:
-                    t = self._compile_expression(p, scope)
-                    tensor = t.tensor
-                    if t.shape.fluent_shape == ():
-                        tensor = tf.expand_dims(tensor, -1)
-                    fluent = TensorFluent(tensor, t.scope[:], t.batch)
+                    fluent = self._compile_expression(p, scope)
                     constraints.append(fluent)
                 return constraints
 
@@ -290,11 +284,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('action_preconditions'):
                 for p in self.action_preconditions:
-                    t = self._compile_expression(p, scope)
-                    tensor = t.tensor
-                    if t.shape.fluent_shape == ():
-                        tensor = tf.expand_dims(tensor, -1)
-                    fluent = TensorFluent(tensor, t.scope[:], t.batch)
+                    fluent = self._compile_expression(p, scope)
                     preconds.append(fluent)
                 return preconds
 
@@ -313,11 +303,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('state_invariants'):
                 for p in self.state_invariants:
-                    t = self._compile_expression(p, scope)
-                    tensor = t.tensor
-                    if t.shape.fluent_shape == ():
-                        tensor = tf.expand_dims(tensor, -1)
-                    fluent = TensorFluent(tensor, t.scope[:], t.batch)
+                    fluent = self._compile_expression(p, scope)
                     invariants.append(fluent)
                 return invariants
 
@@ -333,10 +319,12 @@ class Compiler(object):
         Returns:
             A boolean tensor for checking if `action` is application in `state`.
         '''
-        preconds = self.compile_action_preconditions(state, action)
-        all_preconds = tf.concat([p.tensor for p in preconds], axis=1)
-        checking = tf.reduce_all(all_preconds, axis=1)
-        return checking
+        with self.graph.as_default():
+            with tf.name_scope('action_preconditions_checking'):
+                preconds = self.compile_action_preconditions(state, action)
+                all_preconds = tf.stack([p.tensor for p in preconds], axis=1)
+                checking = tf.reduce_all(all_preconds, axis=1)
+                return checking
 
     def compile_action_bound_constraints(self,
             state: Sequence[tf.Tensor]) -> Dict[str, Bounds]:
@@ -657,8 +645,6 @@ class Compiler(object):
         for name in self.interm_fluent_ordering:
             fluent = interm_fluents[name]
             shape = self._param_types_to_shape(fluent.param_types)
-            if shape == ():
-                shape = (1,)
             shapes.append(shape)
         return tuple(shapes)
 
@@ -800,8 +786,6 @@ class Compiler(object):
         fluents = dict(fluents)
         for name in ordering:
             fluent_shape = fluents[name].shape.fluent_shape
-            if fluent_shape == ():
-                fluent_shape = (1,)
             size.append(fluent_shape)
         return tuple(size)
 
@@ -970,8 +954,6 @@ class Compiler(object):
                 name_scope = self._identifier(name)
                 with tf.name_scope(name_scope):
                     t = tf.stack([fluent.tensor] * batch_size)
-                    if t.shape.ndims == 1:
-                        t = tf.expand_dims(t, -1)
                 batch_fluents.append(t)
         return tuple(batch_fluents)
 
@@ -1551,10 +1533,19 @@ class Compiler(object):
         if false_total_log_prob is None:
             false_total_log_prob = cls._deterministic_log_prob(false_case)
 
+        true_total_log_prob_tensor = true_total_log_prob.tensor
+        false_total_log_prob_tensor = false_total_log_prob.tensor
+
+        if true_total_log_prob.shape != false_total_log_prob.shape:
+            if true_total_log_prob.shape.as_list() == []:
+                true_total_log_prob_tensor = tf.fill(false_total_log_prob.shape.as_list(), true_total_log_prob.tensor)
+            elif false_total_log_prob.shape.as_list() == []:
+                false_total_log_prob_tensor = tf.fill(true_case.shape.as_list(), false_total_log_prob.tensor)
+
         tensor = tf.where(
                     condition.tensor,
-                    (true_total_log_prob).tensor,
-                    (false_total_log_prob).tensor)
+                    true_total_log_prob_tensor,
+                    false_total_log_prob_tensor)
         scope = []
         batch = condition.batch
         return TensorFluent(tensor, scope, batch)
