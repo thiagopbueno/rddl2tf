@@ -4,6 +4,8 @@ RDDL2TensorFlow compiler in Python3.
 
 # Quickstart
 
+**rddl2tf** is a Python 3.5+ package available in PyPI.
+
 ```text
 $ pip3 install rddl2tf
 ```
@@ -20,7 +22,7 @@ rddl2tf can be used as a standalone script or programmatically.
 $ rddl2tf --help
 usage: rddl2tf [-h] [-b BATCH_SIZE] [--logdir LOGDIR] rddl
 
-RDDL2TensorFlow compiler in Python3.
+rddl2tf (v0.4.7): RDDL2TensorFlow compiler in Python3.
 
 positional arguments:
   rddl                  path to RDDL file or rddlgym problem id

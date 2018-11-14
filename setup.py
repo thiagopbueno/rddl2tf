@@ -39,9 +39,10 @@ setup(
     url='https://github.com/thiagopbueno/rddl2tf',
     packages=find_packages(),
     scripts=['scripts/rddl2tf'],
+    python_requires='>=3.5',
     install_requires=[
-        'pyrddl',
-        'rddlgym',
+        'pyrddl>=0.1.7',
+        'rddlgym>=0.5.6',
         'tensorflow',
         'tensorflow-tensorboard',
         'typing'
