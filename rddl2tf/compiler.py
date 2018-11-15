@@ -830,21 +830,25 @@ class Compiler(object):
                 expr_type = precond.etype
                 expr_args = precond.args
 
-                if expr_type == ('aggregation', 'forall'):
+                bounds_expr = None
 
+                if expr_type == ('aggregation', 'forall'):
                     inner_expr = expr_args[1]
                     if inner_expr.etype[0] == 'relational':
+                        bounds_expr = inner_expr
+                elif expr_type[0] == 'relational':
+                    bounds_expr = precond
 
-                        # lower bound
-                        bound = self._extract_lower_bound(name, inner_expr)
-                        if bound is not None:
-                            self._action_lower_bound_constraints[name] = bound
-                            next
-
-                        # upper bound
-                        bound = self._extract_upper_bound(name, inner_expr)
+                if bounds_expr:
+                    # lower bound
+                    bound = self._extract_lower_bound(name, bounds_expr)
+                    if bound is not None:
+                        self._action_lower_bound_constraints[name] = bound
+                    else: # upper bound
+                        bound = self._extract_upper_bound(name, bounds_expr)
                         if bound is not None:
                             self._action_upper_bound_constraints[name] = bound
+
 
     def _extract_lower_bound(self, name: str, expr: Expression) -> Optional[Expression]:
         '''Returns the lower bound expression of the action with given `name`.'''

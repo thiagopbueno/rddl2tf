@@ -72,6 +72,9 @@ action = compiler.compile_default_action(batch_size)
 invariants = compiler.compile_state_invariants(state)
 preconditions = compiler.compile_action_preconditions(state, action)
 
+# compile action bounds
+bounds = compiler.compile_action_bound_constraints(state)
+
 # compile intermediate fluents and next state fluents
 scope = compiler.transition_scope(state, action)
 interms, next_state = compiler.compile_cpfs(scope, batch_size)

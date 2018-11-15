@@ -64,6 +64,7 @@ if __name__ == '__main__':
 
     invariants = compiler.compile_state_invariants(state)
     preconditions = compiler.compile_action_preconditions(state, action)
+    action_bounds = compiler.compile_action_bound_constraints(state)
 
     scope = compiler.transition_scope(state, action)
     interms, next_state = compiler.compile_cpfs(scope, args.batch_size)
