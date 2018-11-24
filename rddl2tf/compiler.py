@@ -1537,19 +1537,10 @@ class Compiler(object):
         if false_total_log_prob is None:
             false_total_log_prob = cls._deterministic_log_prob(false_case)
 
-        true_total_log_prob_tensor = true_total_log_prob.tensor
-        false_total_log_prob_tensor = false_total_log_prob.tensor
-
-        if true_total_log_prob.shape != false_total_log_prob.shape:
-            if true_total_log_prob.shape.as_list() == []:
-                true_total_log_prob_tensor = tf.fill(false_total_log_prob.shape.as_list(), true_total_log_prob.tensor)
-            elif false_total_log_prob.shape.as_list() == []:
-                false_total_log_prob_tensor = tf.fill(true_case.shape.as_list(), false_total_log_prob.tensor)
-
-        tensor = tf.where(
-                    condition.tensor,
-                    true_total_log_prob_tensor,
-                    false_total_log_prob_tensor)
+        true = TensorFluent.constant(True, tf.bool)
+        false = TensorFluent.constant(False, tf.bool)
+        log_prob_fluent = (condition == true) * true_total_log_prob + (condition == false) * false_total_log_prob
+        tensor = log_prob_fluent.tensor
         scope = []
         batch = condition.batch
         return TensorFluent(tensor, scope, batch)

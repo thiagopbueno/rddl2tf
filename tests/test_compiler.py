@@ -446,7 +446,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertListEqual(actual_variables, expected_variables[name])
 
     def test_state_size(self):
-        # TODO self.compiler4
+        # TODO: self.compiler4
         compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler5, self.compiler6, self.compiler7]
         for i, compiler in enumerate(compilers):
             state_size = compiler.state_size
@@ -679,8 +679,8 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(next_state_fluents[next_fluent], TensorFluent)
 
     def test_compile_probabilistic_state_cpfs(self):
-        # TO DO self.compiler4, self.compiler5
-        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler6, self.compiler7]
+        # TODO: self.compiler4
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler5, self.compiler6, self.compiler7]
 
         batch_size = 64
 
@@ -753,8 +753,8 @@ class TestCompiler(unittest.TestCase):
                 self._test_sample_log_prob_fluents(actual[1], actual[2])
 
     def test_compile_reward(self):
-        # TO DO self.compiler4, self.compiler5
-        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler6, self.compiler7]
+        # TODO: self.compiler4
+        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler5, self.compiler6, self.compiler7]
         batch_size = 32
         for compiler in compilers:
             compiler.batch_mode_on()

@@ -93,6 +93,18 @@ class TestTensorFluent(unittest.TestCase):
         ite = TensorFluent.if_then_else(cond, true_case, false_case)
         self._test_fluent(ite, tf.float32, [self.batch_size, 1], [], True)
 
+        # if (visited(?wpt)) then
+        #     (1.0)
+        # else
+        #     (0.0)
+        visited = tf.stack([[True, False, True]] * self.batch_size, axis=0)
+        visited = TensorFluent(visited, scope=['?wpt'], batch=True)
+        cond = visited
+        true_case = self.one
+        false_case = self.zero
+        ite = TensorFluent.if_then_else(cond, true_case, false_case)
+        self._test_fluent(ite, tf.float32, [self.batch_size, 3], ['?wpt'], True)
+
         # if (rlevel'(?r)<=LOWER_BOUND(?r)) then
         #     LOW_PENALTY(?r)*(LOWER_BOUND(?r)-rlevel'(?r))
         # else
