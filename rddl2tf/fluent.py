@@ -495,10 +495,22 @@ class TensorFluent(object):
         Raises:
             ValueError: If cases don't have same shape.
         '''
+
+        # broadcast: condition -> true_case
+        _, reshape2 = TensorFluentShape.broadcast(condition.shape, true_case.shape)
+        if reshape2 is not None:
+            true_case = true_case.reshape(reshape2)
+
+        # broadcast: condition -> false_case
+        _, reshape2 = TensorFluentShape.broadcast(condition.shape, false_case.shape)
+        if reshape2 is not None:
+            false_case = false_case.reshape(reshape2)
+
         condition_tensor = condition.tensor
         true_case_tensor = true_case.tensor
         false_case_tensor = false_case.tensor
 
+        # broadcast constants in cases
         if true_case.shape != false_case.shape:
             if true_case.shape.as_list() == []:
                 true_case_tensor = tf.fill(false_case.shape.as_list(), true_case.tensor)
@@ -508,10 +520,12 @@ class TensorFluent(object):
         if true_case_tensor.shape != false_case_tensor.shape:
             raise ValueError('TensorFluent.if_then_else: cases must be of same shape!')
 
+        # handle different batch modes
         if condition.batch and (not true_case.batch and not false_case.batch):
             true_case_tensor = tf.stack([true_case_tensor] * condition.shape.batch_size, axis=0)
             false_case_tensor = tf.stack([false_case_tensor] * condition.shape.batch_size, axis=0)
 
+        # handle type casting
         if true_case_tensor.dtype == tf.float32 and false_case_tensor.dtype != tf.float32:
             false_case_tensor = tf.cast(false_case_tensor, tf.float32)
         elif true_case_tensor.dtype != tf.float32 and false_case_tensor.dtype == tf.float32:
@@ -523,10 +537,7 @@ class TensorFluent(object):
 
         t = tf.where(condition_tensor, x=true_case_tensor, y=false_case_tensor)
         scope = condition.scope.as_list()
-
-        batch = condition.batch
-        # if (not batch) and (condition.batch or true_case.batch or false_case.batch):
-        #     raise ValueError('TensorFluent.if_then_else: cases must be batch compatible!')
+        batch = condition.batch or true_case.batch or false_case.batch
 
         return TensorFluent(t, scope, batch=batch)
 
