@@ -47,26 +47,16 @@ class TestCompiler(unittest.TestCase):
         self.compiler6 = Compiler(self.rddl6)
         self.compiler7 = Compiler(self.rddl7)
 
-    def test_build_object_table(self):
-        self.assertIn('res', self.compiler1.object_table)
-        size = self.compiler1.object_table['res']['size']
-        idx = self.compiler1.object_table['res']['idx']
-        self.assertEqual(size, 8)
-        objs = ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8']
-        for i, obj in enumerate(objs):
-            self.assertIn(obj, idx)
-            self.assertEqual(idx[obj], i)
+    # def test_build_action_preconditions_table(self):
+    #     local_preconds = self.compiler1.local_action_preconditions
+    #     self.assertIsInstance(local_preconds, dict)
+    #     self.assertEqual(len(local_preconds), 1)
+    #     self.assertIn('outflow/1', local_preconds)
+    #     self.assertEqual(len(local_preconds['outflow/1']), 2)
 
-    def test_build_action_preconditions_table(self):
-        local_preconds = self.compiler1.local_action_preconditions
-        self.assertIsInstance(local_preconds, dict)
-        self.assertEqual(len(local_preconds), 1)
-        self.assertIn('outflow/1', local_preconds)
-        self.assertEqual(len(local_preconds['outflow/1']), 2)
-
-        global_preconds = self.compiler1.global_action_preconditions
-        self.assertIsInstance(global_preconds, list)
-        self.assertEqual(len(global_preconds), 0)
+    #     global_preconds = self.compiler1.global_action_preconditions
+    #     self.assertIsInstance(global_preconds, list)
+    #     self.assertEqual(len(global_preconds), 0)
 
     def test_lower_bound_constraints(self):
         lower_bounds = self.compiler1.action_lower_bound_constraints

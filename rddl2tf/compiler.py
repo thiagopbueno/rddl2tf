@@ -30,8 +30,6 @@ CPFPair = Tuple[str, TensorFluent]
 CPFTriple = Tuple[str, TensorFluent, TensorFluent]
 FluentList = List[Tuple[str, TensorFluent]]
 Bounds = Tuple[Optional[TensorFluent], Optional[TensorFluent]]
-ObjectStruct = Dict[str, Union[int, Dict[str, int], List[str]]]
-ObjectTable = Dict[str, ObjectStruct]
 FluentParamsList = Sequence[Tuple[str, List[str]]]
 Value = Union[bool, int, float]
 ArgsList = Optional[List[str]]
@@ -456,18 +454,6 @@ class Compiler(object):
         return scope
 
     @property
-    def object_table(self) -> ObjectTable:
-        '''The object table for each RDDL type.
-
-        Returns:
-            A mapping from type name to the type size,
-            objects index and objects list.
-        '''
-        if self.__dict__.get('_object_table') is None:
-            self._build_object_table()
-        return self._object_table
-
-    @property
     def non_fluents(self) -> FluentList:
         '''The list of non-fluents instantiated for a given RDDL non-fluents.
 
@@ -679,7 +665,7 @@ class Compiler(object):
             if param_types is None:
                 names = [fluent.name]
             else:
-                objects = tuple(self.object_table[ptype]['objects'] for ptype in param_types)
+                objects = tuple(self.rddl.object_table[ptype]['objects'] for ptype in param_types)
                 for values in itertools.product(*objects):
                     values = ','.join(values)
                     var_name = '{}({})'.format(fluent.name, values)
@@ -717,35 +703,20 @@ class Compiler(object):
             size.append(fluent_shape)
         return tuple(size)
 
-    def _build_object_table(self):
-        '''Builds the object table for each RDDL type.'''
-        types = self.rddl.domain.types
-        objects = dict(self.rddl.non_fluents.objects)
-        self._object_table = dict()
-        for name, value in self.rddl.domain.types:
-            if value == 'object':
-                objs = objects[name]
-                idx = { obj: i for i, obj in enumerate(objs) }
-                self._object_table[name] = {
-                    'size': len(objs),
-                    'idx': idx,
-                    'objects': objs
-                }
-
-    def _build_preconditions_table(self):
-        '''Builds the local action precondition expressions.'''
-        self._local_action_preconditions = dict()
-        self._global_action_preconditions = []
-        action_fluents = self.rddl.domain.action_fluents
-        for precond in self.rddl.domain.preconds:
-            scope = precond.scope
-            action_scope = [action for action in scope if action in action_fluents]
-            if len(action_scope) == 1:
-                name = action_scope[0]
-                self._local_action_preconditions[name] = self._local_action_preconditions.get(name, [])
-                self._local_action_preconditions[name].append(precond)
-            else:
-                self._global_action_preconditions.append(precond)
+    # def _build_preconditions_table(self):
+    #     '''Builds the local action precondition expressions.'''
+    #     self._local_action_preconditions = dict()
+    #     self._global_action_preconditions = []
+    #     action_fluents = self.rddl.domain.action_fluents
+    #     for precond in self.rddl.domain.preconds:
+    #         scope = precond.scope
+    #         action_scope = [action for action in scope if action in action_fluents]
+    #         if len(action_scope) == 1:
+    #             name = action_scope[0]
+    #             self._local_action_preconditions[name] = self._local_action_preconditions.get(name, [])
+    #             self._local_action_preconditions[name].append(precond)
+    #         else:
+    #             self._global_action_preconditions.append(precond)
 
     def _build_action_bound_constraints_table(self):
         '''Builds the lower and upper action bound constraint expressions.'''
@@ -833,7 +804,7 @@ class Compiler(object):
                     if args is not None:
                         idx = []
                         for ptype, arg in zip(pvar.param_types, args):
-                            idx.append(self.object_table[ptype]['idx'][arg])
+                            idx.append(self.rddl.object_table[ptype]['idx'][arg])
                         idx = tuple(idx)
                         fluent[idx] = val
                     else:
@@ -1486,5 +1457,5 @@ class Compiler(object):
     def _param_types_to_shape(self, param_types: Optional[str]) -> Sequence[int]:
         '''Returns the fluent shape given its `param_types`.'''
         param_types = [] if param_types is None else param_types
-        shape = tuple(self.object_table[ptype]['size'] for ptype in param_types)
+        shape = tuple(self.rddl.object_table[ptype]['size'] for ptype in param_types)
         return shape
