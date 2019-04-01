@@ -20,7 +20,6 @@ from pyrddl.expr import Expression
 
 from rddl2tf.fluent import TensorFluent
 
-import itertools
 import numpy as np
 import tensorflow as tf
 
@@ -30,7 +29,6 @@ CPFPair = Tuple[str, TensorFluent]
 CPFTriple = Tuple[str, TensorFluent, TensorFluent]
 FluentList = List[Tuple[str, TensorFluent]]
 Bounds = Tuple[Optional[TensorFluent], Optional[TensorFluent]]
-FluentParamsList = Sequence[Tuple[str, List[str]]]
 Value = Union[bool, int, float]
 ArgsList = Optional[List[str]]
 InitializerPair = Tuple[Tuple[str, ArgsList], Value]
@@ -557,81 +555,6 @@ class Compiler(object):
             dtype = self._range_type_to_dtype(fluent.range)
             dtypes.append(dtype)
         return tuple(dtypes)
-
-    @property
-    def non_fluent_variables(self) -> FluentParamsList:
-        '''Returns the instantiated non-fluents in canonical order.
-
-        Returns:
-            Sequence[Tuple[str, List[str]]]: A tuple of pairs of fluent name
-            and a list of instantiated fluents represented as strings.
-        '''
-        fluents = self.rddl.domain.non_fluents
-        ordering = self.rddl.domain.non_fluent_ordering
-        return self._fluent_params(fluents, ordering)
-
-    @property
-    def state_fluent_variables(self) -> FluentParamsList:
-        '''Returns the instantiated state fluents in canonical order.
-
-        Returns:
-            Sequence[Tuple[str, List[str]]]: A tuple of pairs of fluent name
-            and a list of instantiated fluents represented as strings.
-        '''
-        fluents = self.rddl.domain.state_fluents
-        ordering = self.rddl.domain.state_fluent_ordering
-        return self._fluent_params(fluents, ordering)
-
-    @property
-    def interm_fluent_variables(self) -> FluentParamsList:
-        '''Returns the instantiated intermediate fluents in canonical order.
-
-        Returns:
-            Sequence[Tuple[str, List[str]]]: A tuple of pairs of fluent name
-            and a list of instantiated fluents represented as strings.
-        '''
-        fluents = self.rddl.domain.intermediate_fluents
-        ordering = self.rddl.domain.interm_fluent_ordering
-        return self._fluent_params(fluents, ordering)
-
-    @property
-    def action_fluent_variables(self) -> FluentParamsList:
-        '''Returns the instantiated action fluents in canonical order.
-
-        Returns:
-            Sequence[Tuple[str, List[str]]]: A tuple of pairs of fluent name
-            and a list of instantiated fluents represented as strings.
-        '''
-        fluents = self.rddl.domain.action_fluents
-        ordering = self.rddl.domain.action_fluent_ordering
-        return self._fluent_params(fluents, ordering)
-
-    def _fluent_params(self, fluents, ordering) -> FluentParamsList:
-        '''Returns the instantiated `fluents` for the given `ordering`.
-
-        For each fluent in `fluents`, it instantiates each parameter
-        type w.r.t. the contents of the object table.
-
-        Returns:
-            Sequence[Tuple[str, List[str]]]: A tuple of pairs of fluent name
-            and a list of instantiated fluents represented as strings.
-        '''
-        variables = []
-        for fluent_id in ordering:
-            fluent = fluents[fluent_id]
-            param_types = fluent.param_types
-            objects = ()
-            names = []
-            if param_types is None:
-                names = [fluent.name]
-            else:
-                objects = tuple(self.rddl.object_table[ptype]['objects'] for ptype in param_types)
-                for values in itertools.product(*objects):
-                    values = ','.join(values)
-                    var_name = '{}({})'.format(fluent.name, values)
-                    names.append(var_name)
-            variables.append((fluent_id, names))
-        return tuple(variables)
 
     @classmethod
     def _fluent_dtype(cls, fluents, ordering) -> Sequence[tf.DType]:

@@ -297,63 +297,6 @@ class TestCompiler(unittest.TestCase):
                 for v1, v2 in zip(list1, list2):
                     self.assertAlmostEqual(v1, v2)
 
-    def test_state_fluent_variables(self):
-        compilers = [self.compiler1, self.compiler2]
-        fluent_variables = [
-            {
-            'rlevel/1': ['rlevel(t1)', 'rlevel(t2)', 'rlevel(t3)', 'rlevel(t4)', 'rlevel(t5)', 'rlevel(t6)', 'rlevel(t7)', 'rlevel(t8)']
-            },
-            {
-                'picTaken/1': ['picTaken(p1)', 'picTaken(p2)', 'picTaken(p3)'],
-                'time/0': ['time'],
-                'xPos/0': ['xPos'],
-                'yPos/0': ['yPos']
-            }
-        ]
-        for compiler, expected_variables in zip(compilers, fluent_variables):
-            fluent_variables = compiler.state_fluent_variables
-            self.assertEqual(len(fluent_variables), len(expected_variables))
-            for name, actual_variables in fluent_variables:
-                self.assertIn(name, expected_variables)
-                self.assertListEqual(actual_variables, expected_variables[name])
-
-    def test_interm_fluent_variables(self):
-        compilers = [self.compiler1, self.compiler2]
-        fluent_variables = [
-            {
-            'evaporated/1': ['evaporated(t1)', 'evaporated(t2)', 'evaporated(t3)', 'evaporated(t4)', 'evaporated(t5)', 'evaporated(t6)', 'evaporated(t7)', 'evaporated(t8)'],
-            'rainfall/1': ['rainfall(t1)', 'rainfall(t2)', 'rainfall(t3)', 'rainfall(t4)', 'rainfall(t5)', 'rainfall(t6)', 'rainfall(t7)', 'rainfall(t8)'],
-            'overflow/1': ['overflow(t1)', 'overflow(t2)', 'overflow(t3)', 'overflow(t4)', 'overflow(t5)', 'overflow(t6)', 'overflow(t7)', 'overflow(t8)'],
-            'inflow/1': ['inflow(t1)', 'inflow(t2)', 'inflow(t3)', 'inflow(t4)', 'inflow(t5)', 'inflow(t6)', 'inflow(t7)', 'inflow(t8)']
-            },
-            {}
-        ]
-        for compiler, expected_variables in zip(compilers, fluent_variables):
-            fluent_variables = compiler.interm_fluent_variables
-            self.assertEqual(len(fluent_variables), len(expected_variables))
-            for name, actual_variables in fluent_variables:
-                self.assertIn(name, expected_variables)
-                self.assertListEqual(actual_variables, expected_variables[name])
-
-    def test_action_fluent_variables(self):
-        compilers = [self.compiler1, self.compiler2]
-        fluent_variables = [
-            {
-                'outflow/1': ['outflow(t1)', 'outflow(t2)', 'outflow(t3)', 'outflow(t4)', 'outflow(t5)', 'outflow(t6)', 'outflow(t7)', 'outflow(t8)']
-            },
-            {
-                'snapPicture/0': ['snapPicture'],
-                'xMove/0': ['xMove'],
-                'yMove/0': ['yMove']
-            }
-        ]
-        for compiler, expected_variables in zip(compilers, fluent_variables):
-            fluent_variables = compiler.action_fluent_variables
-            self.assertEqual(len(fluent_variables), len(expected_variables))
-            for name, actual_variables in fluent_variables:
-                self.assertIn(name, expected_variables)
-                self.assertListEqual(actual_variables, expected_variables[name])
-
     def test_state_size(self):
         # TODO: self.compiler4
         compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler5, self.compiler6, self.compiler7]
