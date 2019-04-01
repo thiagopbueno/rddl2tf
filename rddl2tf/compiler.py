@@ -262,7 +262,7 @@ class Compiler(object):
         constraints = []
         with self.graph.as_default():
             with tf.name_scope('state_action_constraints'):
-                for p in self.state_action_constraints:
+                for p in self.rddl.domain.constraints:
                     fluent = self._compile_expression(p, scope)
                     constraints.append(fluent)
                 return constraints
@@ -283,7 +283,7 @@ class Compiler(object):
         preconds = []
         with self.graph.as_default():
             with tf.name_scope('action_preconditions'):
-                for p in self.action_preconditions:
+                for p in self.rddl.domain.preconds:
                     fluent = self._compile_expression(p, scope)
                     preconds.append(fluent)
                 return preconds
@@ -302,7 +302,7 @@ class Compiler(object):
         invariants = []
         with self.graph.as_default():
             with tf.name_scope('state_invariants'):
-                for p in self.state_invariants:
+                for p in self.rddl.domain.invariants:
                     fluent = self._compile_expression(p, scope)
                     invariants.append(fluent)
                 return invariants
@@ -501,22 +501,6 @@ class Compiler(object):
         return self._default_action_fluents
 
     @property
-    def state_action_constraints(self) -> Dict[str, List[Expression]]:
-        '''The state-action constraint expressions.
-
-        Returns:
-            Dict[str, List[Expression]]: A mapping from fluent name to a list of Expressions.'''
-        return self.rddl.domain.constraints
-
-    @property
-    def action_preconditions(self) -> Dict[str, List[Expression]]:
-        '''The action precondition expressions.
-
-        Returns:
-            Dict[str, List[Expression]]: A mapping from fluent name to a list of Expressions.'''
-        return self.rddl.domain.preconds
-
-    @property
     def local_action_preconditions(self) -> Dict[str, List[Expression]]:
         '''The local action precondition expressions.
 
@@ -535,14 +519,6 @@ class Compiler(object):
         if self.__dict__.get('_global_action_preconditions') is None:
             self._build_preconditions_table()
         return self._global_action_preconditions
-
-    @property
-    def state_invariants(self) -> Dict[str, List[Expression]]:
-        '''The state invariant expressions.
-
-        Returns:
-            Dict[str, List[Expression]]: A mapping from fluent name to a list of Expressions.'''
-        return self.rddl.domain.invariants
 
     @property
     def action_lower_bound_constraints(self) -> Dict[str, Expression]:
