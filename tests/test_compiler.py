@@ -47,32 +47,6 @@ class TestCompiler(unittest.TestCase):
         self.compiler6 = Compiler(self.rddl6)
         self.compiler7 = Compiler(self.rddl7)
 
-    def test_lower_bound_constraints(self):
-        lower_bounds = self.compiler1.action_lower_bound_constraints
-        self.assertIsInstance(lower_bounds, dict)
-        self.assertIn('outflow/1', lower_bounds)
-        lower = lower_bounds['outflow/1']
-        self.assertIsInstance(lower, Expression)
-        self.assertTrue(lower.is_constant_expression())
-        self.assertEqual(lower.value, 0)
-
-        lower_bounds = self.compiler3.action_lower_bound_constraints
-        self.assertIsInstance(lower_bounds, dict)
-        self.assertIn('AIR/1', lower_bounds)
-        lower = lower_bounds['AIR/1']
-        self.assertIsInstance(lower, Expression)
-        self.assertTrue(lower.is_constant_expression())
-        self.assertEqual(lower.value, 0)
-
-    def test_upper_bound_constraints(self):
-        upper_bounds = self.compiler1.action_upper_bound_constraints
-        self.assertIsInstance(upper_bounds, dict)
-        self.assertIn('outflow/1', upper_bounds)
-        upper = upper_bounds['outflow/1']
-        self.assertIsInstance(upper, Expression)
-        self.assertTrue(upper.is_pvariable_expression())
-        self.assertEqual(upper.name, 'rlevel/1')
-
     def test_compile_state_action_constraints(self):
         batch_size = 1000
         compilers = [self.compiler4, self.compiler5]

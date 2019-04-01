@@ -338,8 +338,8 @@ class Compiler(object):
         '''
         scope = self.action_precondition_scope(state)
 
-        lower_bounds = self.action_lower_bound_constraints
-        upper_bounds = self.action_upper_bound_constraints
+        lower_bounds = self.rddl.domain.action_lower_bound_constraints
+        upper_bounds = self.rddl.domain.action_upper_bound_constraints
 
         with self.graph.as_default():
             with tf.name_scope('action_bound_constraints'):
@@ -485,26 +485,6 @@ class Compiler(object):
         if self.__dict__.get('_default_action_fluents') is None:
             self._instantiate_default_action_fluents()
         return self._default_action_fluents
-
-    @property
-    def action_lower_bound_constraints(self) -> Dict[str, Expression]:
-        '''The action lower bound constraint expressions.
-
-        Returns:
-            Dict[str, Expression]: A mapping from fluent name to an Expression.'''
-        if self.__dict__.get('_action_lower_bound_constraints') is None:
-            self._build_action_bound_constraints_table()
-        return self._action_lower_bound_constraints
-
-    @property
-    def action_upper_bound_constraints(self) -> Dict[str, Expression]:
-        '''The action upper bound constraint expressions.
-
-        Returns:
-            Dict[str, Expression]: A mapping from fluent name to an Expression.'''
-        if self.__dict__.get('_action_upper_bound_constraints') is None:
-            self._build_action_bound_constraints_table()
-        return self._action_upper_bound_constraints
 
     @property
     def state_size(self) -> Sequence[Sequence[int]]:
@@ -682,61 +662,6 @@ class Compiler(object):
             fluent_shape = fluents[name].shape.fluent_shape
             size.append(fluent_shape)
         return tuple(size)
-
-    def _build_action_bound_constraints_table(self):
-        '''Builds the lower and upper action bound constraint expressions.'''
-        self._action_lower_bound_constraints = {}
-        self._action_upper_bound_constraints = {}
-
-        for name, preconds in self.rddl.domain.local_action_preconditions.items():
-
-            for precond in preconds:
-                expr_type = precond.etype
-                expr_args = precond.args
-
-                bounds_expr = None
-
-                if expr_type == ('aggregation', 'forall'):
-                    inner_expr = expr_args[1]
-                    if inner_expr.etype[0] == 'relational':
-                        bounds_expr = inner_expr
-                elif expr_type[0] == 'relational':
-                    bounds_expr = precond
-
-                if bounds_expr:
-                    # lower bound
-                    bound = self._extract_lower_bound(name, bounds_expr)
-                    if bound is not None:
-                        self._action_lower_bound_constraints[name] = bound
-                    else: # upper bound
-                        bound = self._extract_upper_bound(name, bounds_expr)
-                        if bound is not None:
-                            self._action_upper_bound_constraints[name] = bound
-
-
-    def _extract_lower_bound(self, name: str, expr: Expression) -> Optional[Expression]:
-        '''Returns the lower bound expression of the action with given `name`.'''
-        etype = expr.etype
-        args = expr.args
-        if etype[1] in ['<=', '<']:
-            if args[1].is_pvariable_expression() and args[1].name == name:
-                return args[0]
-        elif etype[1] in ['>=', '>']:
-            if args[0].is_pvariable_expression() and args[0].name == name:
-                return args[1]
-        return None
-
-    def _extract_upper_bound(self, name: str, expr: Expression) -> Optional[Expression]:
-        '''Returns the upper bound expression of the action with given `name`.'''
-        etype = expr.etype
-        args = expr.args
-        if etype[1] in ['<=', '<']:
-            if args[0].is_pvariable_expression() and args[0].name == name:
-                return args[1]
-        elif etype[1] in ['>=', '>']:
-            if args[1].is_pvariable_expression() and args[1].name == name:
-                return args[0]
-        return None
 
     def _instantiate_pvariables(self,
             pvariables: Dict[str, PVariable],
