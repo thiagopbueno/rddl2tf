@@ -487,26 +487,6 @@ class Compiler(object):
         return self._default_action_fluents
 
     @property
-    def local_action_preconditions(self) -> Dict[str, List[Expression]]:
-        '''The local action precondition expressions.
-
-        Returns:
-            Dict[str, List[Expression]]: A mapping from fluent name to a list of Expressions.'''
-        if self.__dict__.get('_local_action_preconditions') is None:
-            self._build_preconditions_table()
-        return self._local_action_preconditions
-
-    @property
-    def global_action_preconditions(self) -> Dict[str, List[Expression]]:
-        '''The global action precondition expressions.
-
-        Returns:
-            Dict[str, List[Expression]]: A mapping from fluent name to a list of Expressions.'''
-        if self.__dict__.get('_global_action_preconditions') is None:
-            self._build_preconditions_table()
-        return self._global_action_preconditions
-
-    @property
     def action_lower_bound_constraints(self) -> Dict[str, Expression]:
         '''The action lower bound constraint expressions.
 
@@ -703,27 +683,12 @@ class Compiler(object):
             size.append(fluent_shape)
         return tuple(size)
 
-    # def _build_preconditions_table(self):
-    #     '''Builds the local action precondition expressions.'''
-    #     self._local_action_preconditions = dict()
-    #     self._global_action_preconditions = []
-    #     action_fluents = self.rddl.domain.action_fluents
-    #     for precond in self.rddl.domain.preconds:
-    #         scope = precond.scope
-    #         action_scope = [action for action in scope if action in action_fluents]
-    #         if len(action_scope) == 1:
-    #             name = action_scope[0]
-    #             self._local_action_preconditions[name] = self._local_action_preconditions.get(name, [])
-    #             self._local_action_preconditions[name].append(precond)
-    #         else:
-    #             self._global_action_preconditions.append(precond)
-
     def _build_action_bound_constraints_table(self):
         '''Builds the lower and upper action bound constraint expressions.'''
         self._action_lower_bound_constraints = {}
         self._action_upper_bound_constraints = {}
 
-        for name, preconds in self.local_action_preconditions.items():
+        for name, preconds in self.rddl.domain.local_action_preconditions.items():
 
             for precond in preconds:
                 expr_type = precond.etype

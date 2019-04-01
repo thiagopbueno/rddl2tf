@@ -47,17 +47,6 @@ class TestCompiler(unittest.TestCase):
         self.compiler6 = Compiler(self.rddl6)
         self.compiler7 = Compiler(self.rddl7)
 
-    # def test_build_action_preconditions_table(self):
-    #     local_preconds = self.compiler1.local_action_preconditions
-    #     self.assertIsInstance(local_preconds, dict)
-    #     self.assertEqual(len(local_preconds), 1)
-    #     self.assertIn('outflow/1', local_preconds)
-    #     self.assertEqual(len(local_preconds['outflow/1']), 2)
-
-    #     global_preconds = self.compiler1.global_action_preconditions
-    #     self.assertIsInstance(global_preconds, list)
-    #     self.assertEqual(len(global_preconds), 0)
-
     def test_lower_bound_constraints(self):
         lower_bounds = self.compiler1.action_lower_bound_constraints
         self.assertIsInstance(lower_bounds, dict)
