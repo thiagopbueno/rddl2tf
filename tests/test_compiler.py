@@ -344,50 +344,6 @@ class TestCompiler(unittest.TestCase):
                 for v1, v2 in zip(list1, list2):
                     self.assertAlmostEqual(v1, v2)
 
-    def test_non_fluent_ordering(self):
-        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
-        for compiler in compilers:
-            non_fluents = dict(compiler.non_fluents)
-            action_fluent_ordering = compiler.non_fluent_ordering
-            self.assertEqual(len(action_fluent_ordering), len(non_fluents))
-            for action_fluent in action_fluent_ordering:
-                self.assertIn(action_fluent, non_fluents)
-
-    def test_state_fluent_ordering(self):
-        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
-        for compiler in compilers:
-            initial_state_fluents = dict(compiler.initial_state_fluents)
-            current_state_ordering = compiler.state_fluent_ordering
-            self.assertEqual(len(current_state_ordering), len(initial_state_fluents))
-            for fluent in initial_state_fluents:
-                self.assertIn(fluent, current_state_ordering)
-
-            next_state_ordering = compiler.next_state_fluent_ordering
-            self.assertEqual(len(current_state_ordering), len(next_state_ordering))
-
-            for current_fluent, next_fluent in zip(current_state_ordering, next_state_ordering):
-                self.assertEqual(utils.rename_state_fluent(current_fluent), next_fluent)
-                self.assertEqual(utils.rename_next_state_fluent(next_fluent), current_fluent)
-
-    def test_interm_fluent_ordering(self):
-        compilers = [self.compiler1, self.compiler2]
-        expected = [
-            ['evaporated/1', 'overflow/1', 'rainfall/1', 'inflow/1'],
-            []
-        ]
-        for compiler, expected_ordering in zip(compilers, expected):
-            interm_fluent_ordering = compiler.interm_fluent_ordering
-            self.assertListEqual(interm_fluent_ordering, expected_ordering)
-
-    def test_action_fluent_ordering(self):
-        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
-        for compiler in compilers:
-            default_action_fluents = dict(compiler.default_action_fluents)
-            action_fluent_ordering = compiler.action_fluent_ordering
-            self.assertEqual(len(action_fluent_ordering), len(default_action_fluents))
-            for action_fluent in action_fluent_ordering:
-                self.assertIn(action_fluent, default_action_fluents)
-
     def test_state_fluent_variables(self):
         compilers = [self.compiler1, self.compiler2]
         fluent_variables = [
@@ -451,8 +407,8 @@ class TestCompiler(unittest.TestCase):
         for i, compiler in enumerate(compilers):
             state_size = compiler.state_size
             initial_state_fluents = dict(compiler.initial_state_fluents)
-            state_fluent_ordering = compiler.state_fluent_ordering
-            next_state_fluent_ordering = compiler.next_state_fluent_ordering
+            state_fluent_ordering = compiler.rddl.domain.state_fluent_ordering
+            next_state_fluent_ordering = compiler.rddl.domain.next_state_fluent_ordering
 
             self.assertIsInstance(state_size, tuple)
             for shape in state_size:
@@ -485,7 +441,7 @@ class TestCompiler(unittest.TestCase):
         for compiler in compilers:
             action_size = compiler.action_size
             default_action_fluents = dict(compiler.default_action_fluents)
-            action_fluent_ordering = compiler.action_fluent_ordering
+            action_fluent_ordering = compiler.rddl.domain.action_fluent_ordering
             self.assertIsInstance(action_size, tuple)
             self.assertEqual(len(action_size), len(default_action_fluents))
             self.assertEqual(len(action_size), len(action_fluent_ordering))
@@ -496,7 +452,7 @@ class TestCompiler(unittest.TestCase):
         compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             interm_size = compiler.interm_size
-            interm_ordering = compiler.interm_fluent_ordering
+            interm_ordering = compiler.rddl.domain.interm_fluent_ordering
             self.assertIsInstance(interm_size, tuple)
             self.assertEqual(len(interm_size), len(interm_ordering))
             for shape in interm_size:
@@ -507,7 +463,7 @@ class TestCompiler(unittest.TestCase):
         for compiler in compilers:
             state_dtype = compiler.state_dtype
             initial_state_fluents = compiler.initial_state_fluents
-            state_fluent_ordering = compiler.state_fluent_ordering
+            state_fluent_ordering = compiler.rddl.domain.state_fluent_ordering
             self.assertIsInstance(state_dtype, tuple)
             self.assertEqual(len(state_dtype), len(initial_state_fluents))
             self.assertEqual(len(state_dtype), len(state_fluent_ordering))
@@ -519,7 +475,7 @@ class TestCompiler(unittest.TestCase):
         compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
             interm_dtype = compiler.interm_dtype
-            interm_ordering = compiler.interm_fluent_ordering
+            interm_ordering = compiler.rddl.domain.interm_fluent_ordering
             self.assertIsInstance(interm_dtype, tuple)
             self.assertEqual(len(interm_dtype), len(interm_ordering))
             for i, dtype in enumerate(interm_dtype):
@@ -530,7 +486,7 @@ class TestCompiler(unittest.TestCase):
         for compiler in compilers:
             action_dtype = compiler.action_dtype
             default_action_fluents = compiler.default_action_fluents
-            action_fluent_ordering = compiler.action_fluent_ordering
+            action_fluent_ordering = compiler.rddl.domain.action_fluent_ordering
             self.assertIsInstance(action_dtype, tuple)
             self.assertEqual(len(action_dtype), len(default_action_fluents))
             self.assertEqual(len(action_dtype), len(action_fluent_ordering))
@@ -544,7 +500,7 @@ class TestCompiler(unittest.TestCase):
             fluents = compiler.initial_state_fluents
             scope = dict(fluents)
             self.assertEqual(len(fluents), len(scope))
-            for i, name in enumerate(compiler.state_fluent_ordering):
+            for i, name in enumerate(compiler.rddl.domain.state_fluent_ordering):
                 self.assertIs(scope[name], fluents[i][1])
 
     def test_action_scope(self):
@@ -553,7 +509,7 @@ class TestCompiler(unittest.TestCase):
             fluents = compiler.default_action_fluents
             scope = dict(fluents)
             self.assertEqual(len(fluents), len(scope))
-            for i, name in enumerate(compiler.action_fluent_ordering):
+            for i, name in enumerate(compiler.rddl.domain.action_fluent_ordering):
                 self.assertIs(scope[name], fluents[i][1])
 
     def test_compile_expressions(self):
@@ -705,14 +661,14 @@ class TestCompiler(unittest.TestCase):
                 self._test_sample_log_prob_fluents(cpf[1], cpf[2])
 
             next_state_fluents = set(cpf[0] for cpf in next_state_fluents)
-            for fluent in compiler.state_fluent_ordering:
+            for fluent in compiler.rddl.domain.state_fluent_ordering:
                 next_fluent = utils.rename_state_fluent(fluent)
                 self.assertIn(next_fluent, next_state_fluents)
 
     def test_compile_intermediate_cpfs(self):
         compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
-            fluents = compiler.interm_fluent_ordering
+            fluents = compiler.rddl.domain.interm_fluent_ordering
 
             nf = compiler.non_fluents_scope()
             sf = dict(compiler.initial_state_fluents)
@@ -735,7 +691,7 @@ class TestCompiler(unittest.TestCase):
         for compiler in compilers:
             compiler.batch_mode_on()
 
-            fluents = compiler.interm_fluent_ordering
+            fluents = compiler.rddl.domain.interm_fluent_ordering
 
             state = compiler.compile_initial_state(batch_size)
             action = compiler.compile_default_action(batch_size)

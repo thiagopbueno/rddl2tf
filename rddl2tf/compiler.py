@@ -203,7 +203,7 @@ class Compiler(object):
                     with tf.name_scope(name_scope):
                         t = self._compile_expression(cpf.expr, scope, batch_size)
                     next_state_fluents.append((cpf.name, t))
-                key = lambda f: self.next_state_fluent_ordering.index(f[0])
+                key = lambda f: self.rddl.domain.next_state_fluent_ordering.index(f[0])
                 next_state_fluents = sorted(next_state_fluents, key=key)
                 return next_state_fluents
 
@@ -228,7 +228,7 @@ class Compiler(object):
                     with tf.name_scope(name_scope):
                         fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size, reparam)
                     next_state_fluents.append((cpf.name, fluent, log_prob))
-                key = lambda f: self.next_state_fluent_ordering.index(f[0])
+                key = lambda f: self.rddl.domain.next_state_fluent_ordering.index(f[0])
                 next_state_fluents = sorted(next_state_fluents, key=key)
                 return next_state_fluents
 
@@ -347,7 +347,7 @@ class Compiler(object):
             with tf.name_scope('action_bound_constraints'):
 
                 bounds = {}
-                for name in self.action_fluent_ordering:
+                for name in self.rddl.domain.action_fluent_ordering:
 
                     lower_expr = lower_bounds.get(name)
                     lower = None
@@ -378,7 +378,7 @@ class Compiler(object):
         Returns:
             A mapping from state fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
         '''
-        return dict(zip(self.state_fluent_ordering, state_fluents))
+        return dict(zip(self.rddl.domain.state_fluent_ordering, state_fluents))
 
     def action_scope(self, action_fluents: Sequence[tf.Tensor]) -> Dict[str, TensorFluent]:
         '''Returns a partial scope with current action-fluents.
@@ -389,7 +389,7 @@ class Compiler(object):
         Returns:
             A mapping from action fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
         '''
-        return dict(zip(self.action_fluent_ordering, action_fluents))
+        return dict(zip(self.rddl.domain.action_fluent_ordering, action_fluents))
 
     def next_state_scope(self, next_state_fluents: Sequence[tf.Tensor]) -> Dict[str, TensorFluent]:
         '''Returns a partial scope with current next state-fluents.
@@ -400,7 +400,7 @@ class Compiler(object):
         Returns:
             A mapping from next state fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
         '''
-        return dict(zip(self.next_state_fluent_ordering, next_state_fluents))
+        return dict(zip(self.rddl.domain.next_state_fluent_ordering, next_state_fluents))
 
     def transition_scope(self,
         state: Sequence[tf.Tensor],
@@ -565,54 +565,6 @@ class Compiler(object):
         return self._action_upper_bound_constraints
 
     @property
-    def non_fluent_ordering(self) -> List[str]:
-        '''The list of non-fluent names in canonical order.
-
-        Returns:
-            List[str]: A list of fluent names.
-        '''
-        return [name for name in sorted(self.rddl.domain.non_fluents)]
-
-    @property
-    def state_fluent_ordering(self) -> List[str]:
-        '''The list of state-fluent names in canonical order.
-
-        Returns:
-            List[str]: A list of fluent names.
-        '''
-        return [name for name in sorted(self.rddl.domain.state_fluents)]
-
-    @property
-    def action_fluent_ordering(self) -> List[str]:
-        '''The list of action-fluent names in canonical order.
-
-        Returns:
-            List[str]: A list of fluent names.
-        '''
-        return [name for name in sorted(self.rddl.domain.action_fluents)]
-
-    @property
-    def next_state_fluent_ordering(self) -> List[str]:
-        '''The list of next state-fluent names in canonical order.
-
-        Returns:
-            List[str]: A list of fluent names.
-        '''
-        key = lambda x: x.name
-        return [cpf.name for cpf in sorted(self.rddl.domain.state_cpfs, key=key)]
-
-    @property
-    def interm_fluent_ordering(self) -> List[str]:
-        '''The list of intermediate-fluent names in canonical order.
-
-        Returns:
-            List[str]: A list of fluent names.
-        '''
-        interm_fluents = self.rddl.domain.intermediate_fluents.values()
-        key = lambda pvar: (pvar.level, pvar.name)
-        return [str(pvar) for pvar in sorted(interm_fluents, key=key)]
-
-    @property
     def state_size(self) -> Sequence[Sequence[int]]:
         '''The size of each state fluent in canonical order.
 
@@ -620,7 +572,7 @@ class Compiler(object):
             Sequence[Sequence[int]]: A tuple of tuple of integers
             representing the shape and size of each fluent.
         '''
-        return self._fluent_size(self.initial_state_fluents, self.state_fluent_ordering)
+        return self._fluent_size(self.initial_state_fluents, self.rddl.domain.state_fluent_ordering)
 
     @property
     def action_size(self) -> Sequence[Sequence[int]]:
@@ -630,7 +582,7 @@ class Compiler(object):
             Sequence[Sequence[int]]: A tuple of tuple of integers
             representing the shape and size of each fluent.
         '''
-        return self._fluent_size(self.default_action_fluents, self.action_fluent_ordering)
+        return self._fluent_size(self.default_action_fluents, self.rddl.domain.action_fluent_ordering)
 
     @property
     def interm_size(self)-> Sequence[Sequence[int]]:
@@ -642,7 +594,7 @@ class Compiler(object):
         '''
         interm_fluents = self.rddl.domain.intermediate_fluents
         shapes = []
-        for name in self.interm_fluent_ordering:
+        for name in self.rddl.domain.interm_fluent_ordering:
             fluent = interm_fluents[name]
             shape = self._param_types_to_shape(fluent.param_types)
             shapes.append(shape)
@@ -656,7 +608,7 @@ class Compiler(object):
             Sequence[tf.DType]: A tuple of dtypes representing
             the range of each fluent.
         '''
-        return self._fluent_dtype(self.initial_state_fluents, self.state_fluent_ordering)
+        return self._fluent_dtype(self.initial_state_fluents, self.rddl.domain.state_fluent_ordering)
 
     @property
     def action_dtype(self) -> Sequence[tf.DType]:
@@ -666,7 +618,7 @@ class Compiler(object):
             Sequence[tf.DType]: A tuple of dtypes representing
             the range of each fluent.
         '''
-        return self._fluent_dtype(self.default_action_fluents, self.action_fluent_ordering)
+        return self._fluent_dtype(self.default_action_fluents, self.rddl.domain.action_fluent_ordering)
 
     @property
     def interm_dtype(self) -> Sequence[tf.DType]:
@@ -678,7 +630,7 @@ class Compiler(object):
         '''
         interm_fluents = self.rddl.domain.intermediate_fluents
         dtypes = []
-        for name in self.interm_fluent_ordering:
+        for name in self.rddl.domain.interm_fluent_ordering:
             fluent = interm_fluents[name]
             dtype = self._range_type_to_dtype(fluent.range)
             dtypes.append(dtype)
@@ -693,7 +645,7 @@ class Compiler(object):
             and a list of instantiated fluents represented as strings.
         '''
         fluents = self.rddl.domain.non_fluents
-        ordering = self.non_fluent_ordering
+        ordering = self.rddl.domain.non_fluent_ordering
         return self._fluent_params(fluents, ordering)
 
     @property
@@ -705,7 +657,7 @@ class Compiler(object):
             and a list of instantiated fluents represented as strings.
         '''
         fluents = self.rddl.domain.state_fluents
-        ordering = self.state_fluent_ordering
+        ordering = self.rddl.domain.state_fluent_ordering
         return self._fluent_params(fluents, ordering)
 
     @property
@@ -717,7 +669,7 @@ class Compiler(object):
             and a list of instantiated fluents represented as strings.
         '''
         fluents = self.rddl.domain.intermediate_fluents
-        ordering = self.interm_fluent_ordering
+        ordering = self.rddl.domain.interm_fluent_ordering
         return self._fluent_params(fluents, ordering)
 
     @property
@@ -729,7 +681,7 @@ class Compiler(object):
             and a list of instantiated fluents represented as strings.
         '''
         fluents = self.rddl.domain.action_fluents
-        ordering = self.action_fluent_ordering
+        ordering = self.rddl.domain.action_fluent_ordering
         return self._fluent_params(fluents, ordering)
 
     def _fluent_params(self, fluents, ordering) -> FluentParamsList:
@@ -927,20 +879,20 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('non_fluents'):
                 self._non_fluents = self._instantiate_pvariables(
-                    non_fluents, self.non_fluent_ordering, initializer)
+                    non_fluents, self.rddl.domain.non_fluent_ordering, initializer)
                 return self._non_fluents
 
     def _instantiate_initial_state_fluents(self):
         '''Returns the initial state-fluents instantiated.'''
         state_fluents = self.rddl.domain.state_fluents
         initializer = self.rddl.instance.init_state
-        self._initial_state_fluents = self._instantiate_pvariables(state_fluents, self.state_fluent_ordering, initializer)
+        self._initial_state_fluents = self._instantiate_pvariables(state_fluents, self.rddl.domain.state_fluent_ordering, initializer)
         return self._initial_state_fluents
 
     def _instantiate_default_action_fluents(self):
         '''Returns the default action-fluents instantiated.'''
         action_fluents = self.rddl.domain.action_fluents
-        self._default_action_fluents = self._instantiate_pvariables(action_fluents, self.action_fluent_ordering)
+        self._default_action_fluents = self._instantiate_pvariables(action_fluents, self.rddl.domain.action_fluent_ordering)
         return self._default_action_fluents
 
     def _compile_batch_fluents(self,
