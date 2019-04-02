@@ -468,108 +468,6 @@ class Compiler(object):
             self._initialize_non_fluents()
         return self._non_fluents
 
-    @property
-    def state_size(self) -> Sequence[Sequence[int]]:
-        '''The size of each state fluent in canonical order.
-
-        Returns:
-            Sequence[Sequence[int]]: A tuple of tuple of integers
-            representing the shape and size of each fluent.
-        '''
-        return self._fluent_size(self.initial_state_fluents, self.rddl.domain.state_fluent_ordering)
-
-    @property
-    def action_size(self) -> Sequence[Sequence[int]]:
-        '''The size of each action fluent in canonical order.
-
-        Returns:
-            Sequence[Sequence[int]]: A tuple of tuple of integers
-            representing the shape and size of each fluent.
-        '''
-        return self._fluent_size(self.default_action_fluents, self.rddl.domain.action_fluent_ordering)
-
-    @property
-    def interm_size(self)-> Sequence[Sequence[int]]:
-        '''The size of each intermediate fluent in canonical order.
-
-        Returns:
-            Sequence[Sequence[int]]: A tuple of tuple of integers
-            representing the shape and size of each fluent.
-        '''
-        interm_fluents = self.rddl.domain.intermediate_fluents
-        shapes = []
-        for name in self.rddl.domain.interm_fluent_ordering:
-            fluent = interm_fluents[name]
-            shape = self._param_types_to_shape(fluent.param_types)
-            shapes.append(shape)
-        return tuple(shapes)
-
-    @property
-    def state_dtype(self) -> Sequence[tf.DType]:
-        '''The data type of each state fluent in canonical order.
-
-        Returns:
-            Sequence[tf.DType]: A tuple of dtypes representing
-            the range of each fluent.
-        '''
-        return self._fluent_dtype(self.initial_state_fluents, self.rddl.domain.state_fluent_ordering)
-
-    @property
-    def action_dtype(self) -> Sequence[tf.DType]:
-        '''The data type of each action fluent in canonical order.
-
-        Returns:
-            Sequence[tf.DType]: A tuple of dtypes representing
-            the range of each fluent.
-        '''
-        return self._fluent_dtype(self.default_action_fluents, self.rddl.domain.action_fluent_ordering)
-
-    @property
-    def interm_dtype(self) -> Sequence[tf.DType]:
-        '''The data type of each intermediate fluent in canonical order.
-
-        Returns:
-            Sequence[tf.DType]: A tuple of dtypes representing
-            the range of each fluent.
-        '''
-        interm_fluents = self.rddl.domain.intermediate_fluents
-        dtypes = []
-        for name in self.rddl.domain.interm_fluent_ordering:
-            fluent = interm_fluents[name]
-            dtype = self._range_type_to_dtype(fluent.range)
-            dtypes.append(dtype)
-        return tuple(dtypes)
-
-    @classmethod
-    def _fluent_dtype(cls, fluents, ordering) -> Sequence[tf.DType]:
-        '''Returns the data types of `fluents` following the given `ordering`.
-
-        Returns:
-            Sequence[tf.DType]: A tuple of dtypes representing
-            the range of each fluent.
-        '''
-        dtype = []
-        fluents = dict(fluents)
-        for name in ordering:
-            fluent_dtype = fluents[name].dtype
-            dtype.append(fluent_dtype)
-        return tuple(dtype)
-
-    @classmethod
-    def _fluent_size(cls, fluents, ordering) -> Sequence[Sequence[int]]:
-        '''Returns the sizes of `fluents` following the given `ordering`.
-
-        Returns:
-            Sequence[Sequence[int]]: A tuple of tuple of integers
-            representing the shape and size of each fluent.
-        '''
-        size = []
-        fluents = dict(fluents)
-        for name in ordering:
-            fluent_shape = fluents[name].shape.fluent_shape
-            size.append(fluent_shape)
-        return tuple(size)
-
     def _initialize_pvariables(self,
             pvariables: Dict[str, PVariable],
             ordering: List[str],
@@ -592,7 +490,7 @@ class Compiler(object):
 
         for name in ordering:
             pvar = pvariables[name]
-            shape = self._param_types_to_shape(pvar.param_types)
+            shape = self.rddl._param_types_to_shape(pvar.param_types)
             dtype = self._range_type_to_dtype(pvar.range)
             fluent = np.full(shape, pvar.default)
 
@@ -1257,9 +1155,3 @@ class Compiler(object):
         scope = []
         batch = fluent.batch
         return TensorFluent(tensor, scope, batch)
-
-    def _param_types_to_shape(self, param_types: Optional[str]) -> Sequence[int]:
-        '''Returns the fluent shape given its `param_types`.'''
-        param_types = [] if param_types is None else param_types
-        shape = tuple(self.rddl.object_table[ptype]['size'] for ptype in param_types)
-        return shape
