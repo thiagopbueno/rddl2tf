@@ -22,7 +22,7 @@ rddl2tf can be used as a standalone script or programmatically.
 $ rddl2tf --help
 usage: rddl2tf [-h] [-b BATCH_SIZE] [--logdir LOGDIR] rddl
 
-rddl2tf (v0.4.7): RDDL2TensorFlow compiler in Python3.
+rddl2tf (v0.5.0): RDDL2TensorFlow compiler in Python3.
 
 positional arguments:
   rddl                  path to RDDL file or rddlgym problem id
@@ -137,7 +137,7 @@ If you are having issues with ``rddl2tf``, please let me know at: [thiago.pbueno
 
 # License
 
-Copyright (c) 2018 Thiago Pereira Bueno All Rights Reserved.
+Copyright (c) 2018-2019 Thiago Pereira Bueno All Rights Reserved.
 
 rddl2tf is free software: you can redistribute it and/or modify it
 under the terms of the GNU Lesser General Public License as published by
