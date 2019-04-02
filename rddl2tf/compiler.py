@@ -69,20 +69,23 @@ class Compiler(object):
         '''Sets off the batch mode flag.'''
         self.batch_mode = False
 
-    def compile_initial_state(self, batch_size: int) -> Sequence[tf.Tensor]:
+    def compile_initial_state(self, batch_size: Optional[int] = None) -> Sequence[tf.Tensor]:
         '''Returns a tuple of tensors representing the initial state fluents.
 
         Args:
-            batch_size (int): The batch size.
+            batch_size (Optional[int]): The batch size.
 
         Returns:
             A tuple of tensors.
         '''
         with self.graph.as_default():
             with tf.name_scope('initial_state'):
+                self._initialize_initial_state_fluents()
+                if batch_size is None:
+                    return self.initial_state_fluents
                 return self._compile_batch_fluents(self.initial_state_fluents, batch_size)
 
-    def compile_default_action(self, batch_size: int) -> Sequence[tf.Tensor]:
+    def compile_default_action(self, batch_size: Optional[int] = None) -> Sequence[tf.Tensor]:
         '''Returns a tuple of tensors representing the default action fluents.
 
         Args:
@@ -93,6 +96,9 @@ class Compiler(object):
         '''
         with self.graph.as_default():
             with tf.name_scope('default_action'):
+                self._initialize_default_action_fluents()
+                if batch_size is None:
+                    return self.default_action_fluents
                 return self._compile_batch_fluents(self.default_action_fluents, batch_size)
 
     def compile_cpfs(self,
@@ -461,28 +467,6 @@ class Compiler(object):
         if self.__dict__.get('_non_fluents') is None:
             self._initialize_non_fluents()
         return self._non_fluents
-
-    @property
-    def initial_state_fluents(self) -> FluentList:
-        '''The list of initial state-fluents instantiated for a given RDDL instance.
-
-        Returns:
-            List[Tuple[str, TensorFluent]]: the list of state fluents.
-        '''
-        if self.__dict__.get('_initial_state_fluents') is None:
-            self._instantiate_initial_state_fluents()
-        return self._initial_state_fluents
-
-    @property
-    def default_action_fluents(self) -> FluentList:
-        '''The list of non-fluents instantiated for a given RDDL domain.
-
-        Returns:
-            List[Tuple[str, TensorFluent]]: the list of action fluents.
-        '''
-        if self.__dict__.get('_default_action_fluents') is None:
-            self._instantiate_default_action_fluents()
-        return self._default_action_fluents
 
     @property
     def state_size(self) -> Sequence[Sequence[int]]:
