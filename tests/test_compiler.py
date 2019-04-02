@@ -180,7 +180,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertListEqual(upper.shape.as_list(), shape)
 
     def test_initialize_non_fluents(self):
-        nf = dict(self.compiler1.non_fluents)
+        nf = dict(self.compiler1.compile_non_fluents())
 
         expected_non_fluents = {
             'MAX_RES_CAP/1': { 'shape': [8,], 'dtype': tf.float32 },

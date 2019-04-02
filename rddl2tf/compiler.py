@@ -70,6 +70,17 @@ class Compiler(object):
         '''Sets off the batch mode flag.'''
         self.batch_mode = False
 
+    def compile_non_fluents(self):
+        '''Returns a tuple of tensors representing the non fluents.
+
+        Returns:
+            Sequence[tf.Tensor]: A tuple of tensors.
+        '''
+        with self.graph.as_default():
+            with tf.name_scope('non_fluents'):
+                self._initialize_non_fluents()
+                return self.non_fluents
+
     def compile_initial_state(self, batch_size: Optional[int] = None) -> Sequence[tf.Tensor]:
         '''Returns a tuple of tensors representing the initial state fluents.
 
@@ -77,7 +88,7 @@ class Compiler(object):
             batch_size (Optional[int]): The batch size.
 
         Returns:
-            A tuple of tensors.
+            Sequence[tf.Tensor]: A tuple of tensors.
         '''
         with self.graph.as_default():
             with tf.name_scope('initial_state'):
@@ -93,7 +104,7 @@ class Compiler(object):
             batch_size (int): The batch size.
 
         Returns:
-            A tuple of tensors.
+            Sequence[tf.Tensor]: A tuple of tensors.
         '''
         with self.graph.as_default():
             with tf.name_scope('default_action'):
@@ -369,7 +380,13 @@ class Compiler(object):
                 return bounds
 
     def non_fluents_scope(self) -> Dict[str, TensorFluent]:
-        '''Returns a partial scope with non-fluents.'''
+        '''Returns a partial scope with non-fluents.
+
+        Returns:
+            A mapping from non-fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+        '''
+        if self.__dict__.get('non_fluents') is None:
+            self._initialize_non_fluents()
         return dict(self.non_fluents)
 
     def state_scope(self, state_fluents: Sequence[tf.Tensor]) -> Dict[str, TensorFluent]:
@@ -458,17 +475,6 @@ class Compiler(object):
             scope.update(self.action_scope(action))
         return scope
 
-    @property
-    def non_fluents(self) -> FluentList:
-        '''The list of non-fluents instantiated for a given RDDL non-fluents.
-
-        Returns:
-            List[Tuple[str, TensorFluent]]: the list of non-fluents.
-        '''
-        if self.__dict__.get('_non_fluents') is None:
-            self._initialize_non_fluents()
-        return self._non_fluents
-
     def _initialize_pvariables(self,
             pvariables: Dict[str, PVariable],
             ordering: List[str],
@@ -519,13 +525,11 @@ class Compiler(object):
         '''Returns the non-fluents instantiated.'''
         non_fluents = self.rddl.domain.non_fluents
         initializer = self.rddl.non_fluents.init_non_fluent
-        with self.graph.as_default():
-            with tf.name_scope('non_fluents'):
-                self._non_fluents = self._initialize_pvariables(
-                    non_fluents,
-                    self.rddl.domain.non_fluent_ordering,
-                    initializer)
-                return self._non_fluents
+        self.non_fluents = self._initialize_pvariables(
+            non_fluents,
+            self.rddl.domain.non_fluent_ordering,
+            initializer)
+        return self.non_fluents
 
     def _initialize_initial_state_fluents(self):
         '''Returns the initial state-fluents instantiated.'''
