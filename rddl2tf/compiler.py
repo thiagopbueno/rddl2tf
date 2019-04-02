@@ -19,6 +19,7 @@ from pyrddl.pvariable import PVariable
 from pyrddl.expr import Expression
 
 from rddl2tf.fluent import TensorFluent
+from rddl2tf import utils
 
 import numpy as np
 import tensorflow as tf
@@ -153,7 +154,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('intermediate_cpfs'):
                 for cpf in self.rddl.domain.intermediate_cpfs:
-                    name_scope = self._identifier(cpf.name)
+                    name_scope = utils.identifier(cpf.name)
                     with tf.name_scope(name_scope):
                         t = self._compile_expression(cpf.expr, scope, batch_size)
                     interm_fluents.append((cpf.name, t))
@@ -178,7 +179,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('intermediate_cpfs'):
                 for cpf in self.rddl.domain.intermediate_cpfs:
-                    name_scope = self._identifier(cpf.name)
+                    name_scope = utils.identifier(cpf.name)
                     with tf.name_scope(name_scope):
                         fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size, reparam)
                     interm_fluents.append((cpf.name, fluent, log_prob))
@@ -201,7 +202,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('state_cpfs'):
                 for cpf in self.rddl.domain.state_cpfs:
-                    name_scope = self._identifier(cpf.name)
+                    name_scope = utils.identifier(cpf.name)
                     with tf.name_scope(name_scope):
                         t = self._compile_expression(cpf.expr, scope, batch_size)
                     next_state_fluents.append((cpf.name, t))
@@ -226,7 +227,7 @@ class Compiler(object):
         with self.graph.as_default():
             with tf.name_scope('state_cpfs'):
                 for cpf in self.rddl.domain.state_cpfs:
-                    name_scope = self._identifier(cpf.name)
+                    name_scope = utils.identifier(cpf.name)
                     with tf.name_scope(name_scope):
                         fluent, log_prob = self._compile_probabilistic_expression(cpf.expr, scope, batch_size, reparam)
                     next_state_fluents.append((cpf.name, fluent, log_prob))
@@ -491,7 +492,7 @@ class Compiler(object):
         for name in ordering:
             pvar = pvariables[name]
             shape = self.rddl._param_types_to_shape(pvar.param_types)
-            dtype = self._range_type_to_dtype(pvar.range)
+            dtype = utils.range_type_to_dtype(pvar.range)
             fluent = np.full(shape, pvar.default)
 
             if initializer is not None:
@@ -506,7 +507,7 @@ class Compiler(object):
                         fluent = val
 
             with self.graph.as_default():
-                t = tf.constant(fluent, dtype=dtype, name=self._identifier(name))
+                t = tf.constant(fluent, dtype=dtype, name=utils.identifier(name))
                 scope = [None] * len(t.shape)
                 fluent = TensorFluent(t, scope, batch=False)
                 fluent_pair = (name, fluent)
@@ -556,7 +557,7 @@ class Compiler(object):
         batch_fluents = []
         with self.graph.as_default():
             for name, fluent in fluents:
-                name_scope = self._identifier(name)
+                name_scope = utils.identifier(name)
                 with tf.name_scope(name_scope):
                     t = tf.stack([fluent.tensor] * batch_size)
                 batch_fluents.append(t)
@@ -664,7 +665,7 @@ class Compiler(object):
         '''
         etype = expr.etype
         args = expr.args
-        dtype = self._python_type_to_dtype(etype[1])
+        dtype = utils.python_type_to_dtype(etype[1])
         fluent = TensorFluent.constant(args, dtype=dtype)
         log_prob = None
         return (fluent, log_prob)
@@ -1071,34 +1072,6 @@ class Compiler(object):
         log_prob = self._aggregation_log_prob(log_prob, x, vars_list)
 
         return (fluent, log_prob)
-
-    @classmethod
-    def _range_type_to_dtype(cls, range_type: str) -> Optional[tf.DType]:
-        '''Maps RDDL range types to TensorFlow dtypes.'''
-        range2dtype = {
-            'real': tf.float32,
-            'int': tf.int32,
-            'bool': tf.bool
-        }
-        return range2dtype[range_type]
-
-    @classmethod
-    def _python_type_to_dtype(cls, python_type: type) -> Optional[tf.DType]:
-        '''Maps python types to TensorFlow dtypes.'''
-        dtype = None
-        if python_type == float:
-            dtype = tf.float32
-        elif python_type == int:
-            dtype = tf.int32
-        elif python_type == bool:
-            dtype = tf.bool
-        return dtype
-
-    @classmethod
-    def _identifier(cls, name):
-        name = name.replace("'", '')
-        name = name.replace('/', '-')
-        return name
 
     @classmethod
     def _sample_log_prob(cls, dist, sample):
