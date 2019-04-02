@@ -22,7 +22,7 @@ rddl2tf can be used as a standalone script or programmatically.
 $ rddl2tf --help
 usage: rddl2tf [-h] [-b BATCH_SIZE] [--logdir LOGDIR] rddl
 
-rddl2tf (v0.5.0): RDDL2TensorFlow compiler in Python3.
+rddl2tf (v0.5.1): RDDL2TensorFlow compiler in Python3.
 
 positional arguments:
   rddl                  path to RDDL file or rddlgym problem id
