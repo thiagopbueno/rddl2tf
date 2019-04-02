@@ -137,7 +137,7 @@ If you are having issues with ``rddl2tf``, please let me know at: [thiago.pbueno
 
 # License
 
-Copyright (c) 2018 Thiago Pereira Bueno All Rights Reserved.
+Copyright (c) 2018-2019 Thiago Pereira Bueno All Rights Reserved.
 
 rddl2tf is free software: you can redistribute it and/or modify it
 under the terms of the GNU Lesser General Public License as published by

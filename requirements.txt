@@ -1,4 +1,4 @@
-pyrddl>=0.1.7
+pyrddl>=0.1.8
 rddlgym>=0.5.6
 numpy==1.14.2
 matplotlib==2.2.3
