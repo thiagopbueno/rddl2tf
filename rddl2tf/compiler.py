@@ -459,7 +459,7 @@ class Compiler(object):
             List[Tuple[str, TensorFluent]]: the list of non-fluents.
         '''
         if self.__dict__.get('_non_fluents') is None:
-            self._instantiate_non_fluents()
+            self._initialize_non_fluents()
         return self._non_fluents
 
     @property
@@ -586,7 +586,7 @@ class Compiler(object):
             size.append(fluent_shape)
         return tuple(size)
 
-    def _instantiate_pvariables(self,
+    def _initialize_pvariables(self,
             pvariables: Dict[str, PVariable],
             ordering: List[str],
             initializer: Optional[InitializerList] = None) -> List[Tuple[str, TensorFluent]]:
@@ -632,28 +632,35 @@ class Compiler(object):
 
         return fluents
 
-    def _instantiate_non_fluents(self):
+    def _initialize_non_fluents(self):
         '''Returns the non-fluents instantiated.'''
         non_fluents = self.rddl.domain.non_fluents
         initializer = self.rddl.non_fluents.init_non_fluent
         with self.graph.as_default():
             with tf.name_scope('non_fluents'):
-                self._non_fluents = self._instantiate_pvariables(
-                    non_fluents, self.rddl.domain.non_fluent_ordering, initializer)
+                self._non_fluents = self._initialize_pvariables(
+                    non_fluents,
+                    self.rddl.domain.non_fluent_ordering,
+                    initializer)
                 return self._non_fluents
 
-    def _instantiate_initial_state_fluents(self):
+    def _initialize_initial_state_fluents(self):
         '''Returns the initial state-fluents instantiated.'''
         state_fluents = self.rddl.domain.state_fluents
         initializer = self.rddl.instance.init_state
-        self._initial_state_fluents = self._instantiate_pvariables(state_fluents, self.rddl.domain.state_fluent_ordering, initializer)
-        return self._initial_state_fluents
+        self.initial_state_fluents = self._initialize_pvariables(
+            state_fluents,
+            self.rddl.domain.state_fluent_ordering,
+            initializer)
+        return self.initial_state_fluents
 
-    def _instantiate_default_action_fluents(self):
+    def _initialize_default_action_fluents(self):
         '''Returns the default action-fluents instantiated.'''
         action_fluents = self.rddl.domain.action_fluents
-        self._default_action_fluents = self._instantiate_pvariables(action_fluents, self.rddl.domain.action_fluent_ordering)
-        return self._default_action_fluents
+        self.default_action_fluents = self._initialize_pvariables(
+            action_fluents,
+            self.rddl.domain.action_fluent_ordering)
+        return self.default_action_fluents
 
     def _compile_batch_fluents(self,
             fluents: List[Tuple[str, TensorFluent]],
@@ -661,8 +668,8 @@ class Compiler(object):
         '''Compiles `fluents` into tensors with given `batch_size`.
 
         Returns:
-            Sequence[tf.Tensor]: A tuple of tensors with first dimensio
-            corresping to the batch size.
+            Sequence[tf.Tensor]: A tuple of tensors with first dimension
+            corresponding to the batch size.
         '''
         batch_fluents = []
         with self.graph.as_default():
