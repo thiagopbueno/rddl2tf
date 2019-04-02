@@ -87,6 +87,23 @@ reward = compiler.compile_reward(scope)
 
 # Compiler
 
+## Core API methods
+
+- `rddl2tf.Compiler.compile_initial_state`
+- `rddl2tf.Compiler.compile_default_action`
+- `rddl2tf.Compiler.compile_cpfs`
+- `rddl2tf.Compiler.compile_probabilistic_cpfs`
+- `rddl2tf.Compiler.compile_intermediate_cpfs`
+- `rddl2tf.Compiler.compile_probabilistic_intermediate_cpfs`
+- `rddl2tf.Compiler.compile_state_cpfs`
+- `rddl2tf.Compiler.compile_probabilistic_state_cpfs`
+- `rddl2tf.Compiler.compile_reward`
+- `rddl2tf.Compiler.compile_state_action_constraints`
+- `rddl2tf.Compiler.compile_action_preconditions`
+- `rddl2tf.Compiler.compile_state_invariants`
+- `rddl2tf.Compiler.compile_action_preconditions_checking`
+- `rddl2tf.Compiler.compile_action_bound_constraints`
+
 
 ## Parameterized Variables (pvariables)
 
