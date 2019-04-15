@@ -384,36 +384,6 @@ class TestCompiler(unittest.TestCase):
             for fluent, expected_fluent in zip(next_state_fluents, expected_state):
                 self.assertEqual(fluent[0], expected_fluent)
 
-    def test_compile_probabilistic_cpfs(self):
-        compilers = [self.compiler1, self.compiler2]
-        expected = [
-            (['evaporated/1', 'overflow/1', 'rainfall/1', 'inflow/1'], ["rlevel'/1"]),
-            ([], ["picTaken'/1", "time'/0", "xPos'/0", "yPos'/0"]),
-        ]
-        for compiler, (expected_interm, expected_state) in zip(compilers, expected):
-            nf = compiler.non_fluents_scope()
-            sf = dict(compiler.compile_initial_state())
-            af = dict(compiler.compile_default_action())
-            scope = { **nf, **sf, **af }
-
-            interm_fluents, next_state_fluents = compiler.compile_probabilistic_cpfs(scope)
-
-            self.assertIsInstance(interm_fluents, list)
-            self.assertEqual(len(interm_fluents), len(expected_interm))
-            for fluent, expected_fluent in zip(interm_fluents, expected_interm):
-                self.assertIsInstance(fluent, tuple)
-                self.assertEqual(len(fluent), 3)
-                self.assertEqual(fluent[0], expected_fluent)
-                self._test_sample_log_prob_fluents(fluent[1], fluent[2])
-
-            self.assertIsInstance(next_state_fluents, list)
-            self.assertEqual(len(next_state_fluents), len(expected_state))
-            for fluent, expected_fluent in zip(next_state_fluents, expected_state):
-                self.assertIsInstance(fluent, tuple)
-                self.assertEqual(len(fluent), 3)
-                self.assertEqual(fluent[0], expected_fluent)
-                self._test_sample_log_prob_fluents(fluent[1], fluent[2])
-
     def test_compile_state_cpfs(self):
         compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
@@ -437,37 +407,6 @@ class TestCompiler(unittest.TestCase):
                 self.assertIn(next_fluent, next_state_fluents)
                 self.assertIsInstance(next_state_fluents[next_fluent], TensorFluent)
 
-    def test_compile_probabilistic_state_cpfs(self):
-        # TODO: self.compiler4
-        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler5, self.compiler6, self.compiler7]
-
-        batch_size = 64
-
-        for compiler in compilers:
-            compiler.batch_mode_on()
-
-            state = compiler.compile_initial_state(batch_size)
-            action = compiler.compile_default_action(batch_size)
-            scope = compiler.transition_scope(state, action)
-
-            interm_fluents, new_scope = compiler.compile_probabilistic_intermediate_cpfs(scope)
-            next_state_fluents = compiler.compile_probabilistic_state_cpfs(new_scope)
-
-            self.assertEqual(len(next_state_fluents), len(state))
-
-            self.assertIsInstance(next_state_fluents, list)
-            for cpf in next_state_fluents:
-                self.assertIsInstance(cpf, tuple)
-                self.assertEqual(len(cpf), 3)
-                self.assertIsInstance(cpf[0], str)
-                self.assertIsInstance(cpf[1], TensorFluent)
-                self._test_sample_log_prob_fluents(cpf[1], cpf[2])
-
-            next_state_fluents = set(cpf[0] for cpf in next_state_fluents)
-            for fluent in compiler.rddl.domain.state_fluent_ordering:
-                next_fluent = utils.rename_state_fluent(fluent)
-                self.assertIn(next_fluent, next_state_fluents)
-
     def test_compile_intermediate_cpfs(self):
         compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
         for compiler in compilers:
@@ -486,30 +425,6 @@ class TestCompiler(unittest.TestCase):
                 self.assertIsInstance(actual[0], str)
                 self.assertIsInstance(actual[1], TensorFluent)
                 self.assertEqual(actual[0], expected)
-
-    def test_compile_probabilistic_intermediate_cpfs(self):
-        compilers = [self.compiler1, self.compiler2, self.compiler3, self.compiler4, self.compiler5, self.compiler6, self.compiler7]
-
-        batch_size = 128
-        for compiler in compilers:
-            compiler.batch_mode_on()
-
-            fluents = compiler.rddl.domain.interm_fluent_ordering
-
-            state = compiler.compile_initial_state(batch_size)
-            action = compiler.compile_default_action(batch_size)
-            scope = compiler.transition_scope(state, action)
-
-            interm_fluents, new_scope = compiler.compile_probabilistic_intermediate_cpfs(scope)
-            self.assertIsInstance(interm_fluents, list)
-            self.assertEqual(len(interm_fluents), len(fluents))
-            for actual, expected in zip(interm_fluents, fluents):
-                self.assertIsInstance(actual, tuple)
-                self.assertEqual(len(actual), 3)
-                self.assertIsInstance(actual[0], str)
-                self.assertEqual(actual[0], expected)
-                self.assertIsInstance(actual[1], TensorFluent)
-                self._test_sample_log_prob_fluents(actual[1], actual[2])
 
     def test_compile_reward(self):
         # TODO: self.compiler4
@@ -562,29 +477,14 @@ class TestCompiler(unittest.TestCase):
                 self._test_random_variable_expression(expr, compiler, scope, batch_size)
 
     def _test_random_variable_expression(self, expr, compiler, scope, batch_size):
-
-        sample, log_prob = compiler._compile_random_variable_expression(expr, scope, batch_size)
-        self._test_sample_log_prob_fluents(sample, log_prob, batch_size)
+        sample = compiler._compile_random_variable_expression(expr, scope, batch_size)
+        self._test_sample_fluents(sample, batch_size)
         self._test_sample_fluent(sample)
 
-        with compiler.graph.as_default():
-            reparam1 = tf.constant(True, shape=(batch_size,), dtype=bool)
-            reparam2 = tf.constant(False, shape=(batch_size,), dtype=bool)
-            reparams = [reparam1, reparam2]
-
-        for reparam in reparams:
-            sample, log_prob = compiler._compile_random_variable_expression(expr, scope, batch_size, reparam)
-            self._test_sample_log_prob_fluents(sample, log_prob, batch_size)
-            self._test_conditional_sample(sample)
-
-    def _test_sample_log_prob_fluents(self, sample, log_prob, batch_size=None):
+    def _test_sample_fluents(self, sample, batch_size=None):
         self.assertIsInstance(sample, TensorFluent)
         if batch_size is not None:
             self.assertEqual(sample.shape[0], batch_size)
-        if log_prob is not None:
-            self.assertIsInstance(log_prob, TensorFluent)
-            self.assertListEqual(sample.shape.as_list(), log_prob.shape.as_list())
-            self.assertListEqual(log_prob.scope.as_list(), [])
 
     def _test_sample_fluent(self, sample):
         self.assertTrue(sample.tensor.name.startswith('sample'), sample.tensor)
