@@ -113,6 +113,48 @@ class Compiler(object):
                     return self.default_action_fluents
                 return self._compile_batch_fluents(self.default_action_fluents, batch_size)
 
+    def cpfs(self,
+             state: Sequence[tf.Tensor],
+             action: Sequence[tf.Tensor]) -> Tuple[List[TensorFluent], List[TensorFluent]]:
+        '''Compiles the intermediate and next state fluent CPFs given
+        the current `state` and `action`.
+
+        Args:
+            state (Sequence[tf.Tensor]): A tuple of state tensors.
+            action (Sequence[tf.Tensor]): A tuple of action tensors.
+
+        Returns:
+            Tuple[List[TensorFluent], List[TensorFluent]]: A pair of lists of TensorFluent
+            representing the intermediate and state CPFs.
+        '''
+        scope = self.transition_scope(state, action)
+        batch_size = int(state[0].shape[0])
+        interm_fluents, next_state_fluents = self.compile_cpfs(scope, batch_size)
+        interms = [fluent for _, fluent in interm_fluents]
+        next_state = [fluent for _, fluent in next_state_fluents]
+        return interms, next_state
+
+    def reward(self,
+               state: Sequence[tf.Tensor],
+               action: Sequence[tf.Tensor],
+               next_state: Sequence[tf.Tensor]) -> tf.Tensor:
+        '''Compiles the reward function given the current `state`, `action` and
+        `next_state`.
+
+        Args:
+            state (Sequence[tf.Tensor]): A tuple of current state tensors.
+            action (Sequence[tf.Tensor]): A tuple of action tensors.
+            next_state (Sequence[tf.Tensor]): A tuple of next state tensors.
+
+        Returns:
+            (:obj:`tf.Tensor`): A tensor representing the reward function.
+        '''
+        scope = self.reward_scope(state, action, next_state)
+        r = self.compile_reward(scope).tensor
+        with self.graph.as_default():
+            with tf.name_scope('reward'):
+                return tf.expand_dims(r, -1)
+
     def compile_cpfs(self,
                      scope: Dict[str, TensorFluent],
                      batch_size: Optional[int] = None) -> Tuple[List[CPFPair], List[CPFPair]]:
@@ -371,6 +413,28 @@ class Compiler(object):
         scope.update(self.non_fluents_scope())
         scope.update(self.state_scope(state))
         scope.update(self.action_scope(action))
+        return scope
+
+    def reward_scope(self,
+                     state: Sequence[tf.Tensor],
+                     action: Sequence[tf.Tensor],
+                     next_state: Sequence[tf.Tensor]) -> Dict[str, TensorFluent]:
+        '''Returns the complete reward fluent scope for the
+        current `state`, `action` fluents, and `next_state` fluents.
+
+        Args:
+            state (Sequence[tf.Tensor]): The current state fluents.
+            action (Sequence[tf.Tensor]): The action fluents.
+            next_state (Sequence[tf.Tensor]): The next state fluents.
+
+        Returns:
+            A mapping from fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+        '''
+        scope = {}
+        scope.update(self.non_fluents_scope())
+        scope.update(self.state_scope(state))
+        scope.update(self.action_scope(action))
+        scope.update(self.next_state_scope(next_state))
         return scope
 
     def state_invariant_scope(self, state: Sequence[tf.Tensor]):
