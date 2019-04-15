@@ -36,19 +36,10 @@ rddl2tf.fluentshape module
     :undoc-members:
     :show-inheritance:
 
-rddl2tf.version module
-----------------------
+rddl2tf.utils module
+--------------------
 
-.. automodule:: rddl2tf.version
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: rddl2tf
+.. automodule:: rddl2tf.utils
     :members:
     :undoc-members:
     :show-inheritance:
