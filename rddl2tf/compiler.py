@@ -566,7 +566,8 @@ class Compiler(object):
     def _compile_expression(self,
                             expr: Expression,
                             scope: Dict[str, TensorFluent],
-                            batch_size: Optional[int] = None) -> TensorFluent:
+                            batch_size: Optional[int] = None,
+                            noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile the expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -578,35 +579,31 @@ class Compiler(object):
         Returns:
             :obj:`rddl2tf.fluent.TensorFluent`: The compiled TensorFluent.
         '''
+        etype2compiler = {
+            'constant':    self._compile_constant_expression,
+            'pvar':        self._compile_pvariable_expression,
+            'randomvar':   self._compile_random_variable_expression,
+            'arithmetic':  self._compile_arithmetic_expression,
+            'boolean':     self._compile_boolean_expression,
+            'relational':  self._compile_relational_expression,
+            'func':        self._compile_function_expression,
+            'control':     self._compile_control_flow_expression,
+            'aggregation': self._compile_aggregation_expression
+        }
+
         etype = expr.etype
+        if etype[0] not in etype2compiler:
+            raise ValueError('Expression type unknown: {}'.format(etype))
 
         with self.graph.as_default():
-
-            if etype[0] == 'constant':
-                return self._compile_constant_expression(expr, scope, batch_size)
-            elif etype[0] == 'pvar':
-                return self._compile_pvariable_expression(expr, scope, batch_size)
-            elif etype[0] == 'randomvar':
-                return self._compile_random_variable_expression(expr, scope, batch_size)
-            elif etype[0] == 'arithmetic':
-                return self._compile_arithmetic_expression(expr, scope, batch_size)
-            elif etype[0] == 'boolean':
-                return self._compile_boolean_expression(expr, scope, batch_size)
-            elif etype[0] == 'relational':
-                return self._compile_relational_expression(expr, scope, batch_size)
-            elif etype[0] == 'func':
-                return self._compile_function_expression(expr, scope, batch_size)
-            elif etype[0] == 'control':
-                return self._compile_control_flow_expression(expr, scope, batch_size)
-            elif etype[0] == 'aggregation':
-                return self._compile_aggregation_expression(expr, scope, batch_size)
-            else:
-                raise ValueError('Expression type unknown: {}'.format(etype))
+            compiler_fn = etype2compiler[etype[0]]
+            return compiler_fn(expr, scope, batch_size, noise)
 
     def _compile_constant_expression(self,
                                      expr: Expression,
                                      scope: Dict[str, TensorFluent],
-                                     batch_size: Optional[int] = None) -> TensorFluent:
+                                     batch_size: Optional[int] = None,
+                                     noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile a constant expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -627,7 +624,8 @@ class Compiler(object):
     def _compile_pvariable_expression(self,
                                       expr: Expression,
                                       scope: Dict[str, TensorFluent],
-                                      batch_size: Optional[int] = None) -> TensorFluent:
+                                      batch_size: Optional[int] = None,
+                                      noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile a pvariable expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -657,7 +655,8 @@ class Compiler(object):
     def _compile_random_variable_expression(self,
                                             expr: Expression,
                                             scope: Dict[str, TensorFluent],
-                                            batch_size: Optional[int] = None) -> TensorFluent:
+                                            batch_size: Optional[int] = None,
+                                            noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile a random variable expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -676,28 +675,34 @@ class Compiler(object):
         args = expr.args
 
         if etype[1] == 'KronDelta':
-            sample = self._compile_expression(args[0], scope)
+            sample = self._compile_expression(args[0], scope, batch_size, noise)
         elif etype[1] == 'Bernoulli':
-            mean = self._compile_expression(args[0], scope)
+            mean = self._compile_expression(args[0], scope, batch_size, noise)
             dist, sample = TensorFluent.Bernoulli(mean, batch_size)
         elif etype[1] == 'Uniform':
-            low = self._compile_expression(args[0], scope)
-            high = self._compile_expression(args[1], scope)
+            low = self._compile_expression(args[0], scope, batch_size, noise)
+            high = self._compile_expression(args[1], scope, batch_size, noise)
             dist, sample = TensorFluent.Uniform(low, high, batch_size)
         elif etype[1] == 'Normal':
-            mean = self._compile_expression(args[0], scope)
-            variance = self._compile_expression(args[1], scope)
-            dist, sample = TensorFluent.Normal(mean, variance, batch_size)
+            if noise is None:
+                mean = self._compile_expression(args[0], scope, batch_size, noise)
+                variance = self._compile_expression(args[1], scope, batch_size, noise)
+                dist, sample = TensorFluent.Normal(mean, variance, batch_size)
+            else:
+                xi = noise.pop()
+                mean = self._compile_expression(args[0], scope, batch_size, noise)
+                variance = self._compile_expression(args[1], scope, batch_size, noise)
+                sample = mean + TensorFluent.sqrt(variance) * xi
         elif etype[1] == 'Laplace':
-            mean = self._compile_expression(args[0], scope)
-            variance = self._compile_expression(args[1], scope)
+            mean = self._compile_expression(args[0], scope, batch_size, noise)
+            variance = self._compile_expression(args[1], scope, batch_size, noise)
             dist, sample = TensorFluent.Laplace(mean, variance, batch_size)
         elif etype[1] == 'Gamma':
-            shape = self._compile_expression(args[0], scope)
-            scale = self._compile_expression(args[1], scope)
+            shape = self._compile_expression(args[0], scope, batch_size, noise)
+            scale = self._compile_expression(args[1], scope, batch_size, noise)
             dist, sample = TensorFluent.Gamma(shape, scale, batch_size)
         elif etype[1] == 'Exponential':
-            mean = self._compile_expression(args[0], scope)
+            mean = self._compile_expression(args[0], scope, batch_size, noise)
             dist, sample = TensorFluent.Exponential(mean, batch_size)
         else:
             raise ValueError('Invalid random variable expression:\n{}.'.format(expr))
@@ -707,7 +712,8 @@ class Compiler(object):
     def _compile_arithmetic_expression(self,
                                        expr: Expression,
                                        scope: Dict[str, TensorFluent],
-                                       batch_size: Optional[int] = None) -> TensorFluent:
+                                       batch_size: Optional[int] = None,
+                                       noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile an arithmetic expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -723,39 +729,41 @@ class Compiler(object):
         args = expr.args
 
         if len(args) == 1:
-            if etype[1] == '+':
-                fluent = self._compile_expression(args[0], scope)
-            elif etype[1] == '-':
-                op1 = self._compile_expression(args[0], scope)
-                fluent = -op1
-            else:
-                raise ValueError('Invalid unary arithmetic expression:\n{}'.format(expr))
-        else:
-            if etype[1] == '+':
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                fluent = op1 + op2
-            elif etype[1] == '-':
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                fluent = op1 - op2
-            elif etype[1] == '*':
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                fluent = op1 * op2
-            elif etype[1] == '/':
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                fluent = op1 / op2
-            else:
+            etype2op = {
+                '+': lambda x: x,
+                '-': lambda x: -x
+            }
+
+            if etype[1] not in etype2op:
                 raise ValueError('Invalid binary arithmetic expression:\n{}'.format(expr))
+
+            op = etype2op[etype[1]]
+            x = self._compile_expression(args[0], scope, batch_size, noise)
+            fluent = op(x)
+
+        else:
+            etype2op = {
+                '+': lambda x, y: x + y,
+                '-': lambda x, y: x - y,
+                '*': lambda x, y: x * y,
+                '/': lambda x, y: x / y,
+            }
+
+            if etype[1] not in etype2op:
+                raise ValueError('Invalid binary arithmetic expression:\n{}'.format(expr))
+
+            op = etype2op[etype[1]]
+            x = self._compile_expression(args[0], scope, batch_size, noise)
+            y = self._compile_expression(args[1], scope, batch_size, noise)
+            fluent = op(x, y)
 
         return fluent
 
     def _compile_boolean_expression(self,
                                     expr: Expression,
                                     scope: Dict[str, TensorFluent],
-                                    batch_size: Optional[int] = None) -> TensorFluent:
+                                    batch_size: Optional[int] = None,
+                                    noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile a boolean/logical expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -771,37 +779,41 @@ class Compiler(object):
         args = expr.args
 
         if len(args) == 1:
-            if etype[1] == '~':
-                op = self._compile_expression(args[0], scope)
-                fluent = ~op
-            else:
+            etype2op = {
+                '~': lambda x: ~x
+            }
+
+            if etype[1] not in etype2op:
                 raise ValueError('Invalid unary boolean expression:\n{}'.format(expr))
+
+            op = etype2op[etype[1]]
+            x = self._compile_expression(args[0], scope, batch_size, noise)
+            fluent = op(x)
+
         else:
-            if etype[1] in ['^', '&']:
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                fluent = op1 & op2
-            elif etype[1] == '|':
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                fluent = op1 | op2
-            elif etype[1] == '=>':
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                fluent = ~op1 | op2
-            elif etype[1] == '<=>':
-                op1 = self._compile_expression(args[0], scope)
-                op2 = self._compile_expression(args[1], scope)
-                fluent = (op1 & op2) | (~op1 & ~op2)
-            else:
+            etype2op = {
+                '^':   lambda x, y: x & y,
+                '&':   lambda x, y: x & y,
+                '|':   lambda x, y: x | y,
+                '=>':  lambda x, y: ~x | y,
+                '<=>': lambda x, y: (x & y) | (~x & ~y)
+            }
+
+            if etype[1] not in etype2op:
                 raise ValueError('Invalid binary boolean expression:\n{}'.format(expr))
+
+            op = etype2op[etype[1]]
+            x = self._compile_expression(args[0], scope, batch_size, noise)
+            y = self._compile_expression(args[1], scope, batch_size, noise)
+            fluent = op(x, y)
 
         return fluent
 
     def _compile_relational_expression(self,
                                        expr: Expression,
                                        scope: Dict[str, TensorFluent],
-                                       batch_size: Optional[int] = None) -> TensorFluent:
+                                       batch_size: Optional[int] = None,
+                                       noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile a relational expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -816,39 +828,30 @@ class Compiler(object):
         etype = expr.etype
         args = expr.args
 
-        if etype[1] == '<=':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            fluent = (op1 <= op2)
-        elif etype[1] == '<':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            fluent = (op1 < op2)
-        elif etype[1] == '>=':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            fluent = (op1 >= op2)
-        elif etype[1] == '>':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            fluent = (op1 > op2)
-        elif etype[1] == '==':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            fluent = (op1 == op2)
-        elif etype[1] == '~=':
-            op1 = self._compile_expression(args[0], scope)
-            op2 = self._compile_expression(args[1], scope)
-            fluent = (op1 != op2)
-        else:
+        etype2op = {
+            '<=': lambda x, y: x <= y,
+            '<':  lambda x, y: x < y,
+            '>=': lambda x, y: x >= y,
+            '>':  lambda x, y: x > y,
+            '==': lambda x, y: x == y,
+            '~=': lambda x, y: x != y
+        }
+
+        if etype[1] not in etype2op:
             raise ValueError('Invalid relational expression:\n{}'.format(expr))
+
+        op = etype2op[etype[1]]
+        x = self._compile_expression(args[0], scope, batch_size, noise)
+        y = self._compile_expression(args[1], scope, batch_size, noise)
+        fluent = op(x, y)
 
         return fluent
 
     def _compile_function_expression(self,
                                      expr: Expression,
                                      scope: Dict[str, TensorFluent],
-                                     batch_size: Optional[int] = None) -> TensorFluent:
+                                     batch_size: Optional[int] = None,
+                                     noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile a function expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -864,69 +867,55 @@ class Compiler(object):
         args = expr.args
 
         if len(args) == 1:
-            if etype[1] == 'abs':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.abs(x)
-            elif etype[1] == 'exp':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.exp(x)
-            elif etype[1] == 'log':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.log(x)
-            elif etype[1] == 'sqrt':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.sqrt(x)
-            elif etype[1] == 'cos':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.cos(x)
-            elif etype[1] == 'sin':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.sin(x)
-            elif etype[1] == 'tan':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.tan(x)
-            elif etype[1] in ['acos', 'arccos']:
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.acos(x)
-            elif etype[1] in ['asin', 'arcsin']:
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.asin(x)
-            elif etype[1] in ['atan', 'arctan']:
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.atan(x)
-            elif etype[1] == 'round':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.round(x)
-            elif etype[1] == 'ceil':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.ceil(x)
-            elif etype[1] == 'floor':
-                x = self._compile_expression(args[0], scope)
-                fluent = TensorFluent.floor(x)
-            else:
+
+            etype2func = {
+                'abs':    TensorFluent.abs,
+                'exp':    TensorFluent.exp,
+                'log':    TensorFluent.log,
+                'sqrt':   TensorFluent.sqrt,
+                'cos':    TensorFluent.cos,
+                'sin':    TensorFluent.sin,
+                'tan':    TensorFluent.tan,
+                'acos':   TensorFluent.acos,
+                'arccos': TensorFluent.acos,
+                'asin':   TensorFluent.asin,
+                'arcsin': TensorFluent.asin,
+                'atan':   TensorFluent.atan,
+                'arctan': TensorFluent.atan,
+                'round':  TensorFluent.round,
+                'ceil':   TensorFluent.ceil,
+                'floor':  TensorFluent.floor
+            }
+
+            if etype[1] not in etype2func:
                 raise ValueError('Invalid unary function expression:\n{}'.format(expr))
+
+            op = etype2func[etype[1]]
+            x = self._compile_expression(args[0], scope, batch_size, noise)
+            fluent = op(x)
+
         else:
-            if etype[1] == 'pow':
-                x = self._compile_expression(args[0], scope)
-                y = self._compile_expression(args[1], scope)
-                fluent = TensorFluent.pow(x, y)
-            elif etype[1] == 'max':
-                x = self._compile_expression(args[0], scope)
-                y = self._compile_expression(args[1], scope)
-                fluent = TensorFluent.max(x, y)
-            elif etype[1] == 'min':
-                x = self._compile_expression(args[0], scope)
-                y = self._compile_expression(args[1], scope)
-                fluent = TensorFluent.min(x, y)
-            else:
+            etype2func = {
+                'pow': TensorFluent.pow,
+                'max': TensorFluent.max,
+                'min': TensorFluent.min
+            }
+
+            if etype[1] not in etype2func:
                 raise ValueError('Invalid binary function expression:\n{}'.format(expr))
+
+            op = etype2func[etype[1]]
+            x = self._compile_expression(args[0], scope, batch_size, noise)
+            y = self._compile_expression(args[1], scope, batch_size, noise)
+            fluent = op(x, y)
 
         return fluent
 
     def _compile_control_flow_expression(self,
                                          expr: Expression,
                                          scope: Dict[str, TensorFluent],
-                                         batch_size: Optional[int] = None) -> TensorFluent:
+                                         batch_size: Optional[int] = None,
+                                         noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile a control flow expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -941,9 +930,9 @@ class Compiler(object):
         etype = expr.etype
         args = expr.args
         if etype[1] == 'if':
-            condition = self._compile_expression(args[0], scope)
-            true_case = self._compile_expression(args[1], scope)
-            false_case = self._compile_expression(args[2], scope)
+            condition = self._compile_expression(args[0], scope, batch_size, noise)
+            true_case = self._compile_expression(args[1], scope, batch_size, noise)
+            false_case = self._compile_expression(args[2], scope, batch_size, noise)
             fluent = TensorFluent.if_then_else(condition, true_case, false_case)
         else:
             raise ValueError('Invalid control flow expression:\n{}'.format(expr))
@@ -952,7 +941,8 @@ class Compiler(object):
     def _compile_aggregation_expression(self,
                                         expr: Expression,
                                         scope: Dict[str, TensorFluent],
-                                        batch_size: Optional[int] = None) -> TensorFluent:
+                                        batch_size: Optional[int] = None,
+                                        noise: Optional[List[tf.Tensor]] = None) -> TensorFluent:
         '''Compile an aggregation expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
@@ -973,21 +963,20 @@ class Compiler(object):
 
         x = self._compile_expression(expr, scope)
 
-        if etype[1] == 'sum':
-            fluent = x.sum(vars_list=vars_list)
-        elif etype[1] == 'prod':
-            fluent = x.prod(vars_list=vars_list)
-        elif etype[1] == 'avg':
-            fluent = x.avg(vars_list=vars_list)
-        elif etype[1] == 'maximum':
-            fluent = x.maximum(vars_list=vars_list)
-        elif etype[1] == 'minimum':
-            fluent = x.minimum(vars_list=vars_list)
-        elif etype[1] == 'exists':
-            fluent = x.exists(vars_list=vars_list)
-        elif etype[1] == 'forall':
-            fluent = x.forall(vars_list=vars_list)
-        else:
+        etype2aggr = {
+            'sum':     x.sum,
+            'prod':    x.prod,
+            'avg':     x.avg,
+            'maximum': x.maximum,
+            'minimum': x.minimum,
+            'exists':  x.exists,
+            'forall':  x.forall
+        }
+
+        if etype[1] not in etype2aggr:
             raise ValueError('Invalid aggregation expression {}.'.format(expr))
+
+        aggr = etype2aggr[etype[1]]
+        fluent = aggr(vars_list=vars_list)
 
         return fluent
