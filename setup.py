@@ -41,7 +41,7 @@ setup(
     scripts=['scripts/rddl2tf'],
     python_requires='>=3.5',
     install_requires=[
-        'pyrddl>=0.1.8',
+        'pyrddl>=0.1.9',
         'rddlgym>=0.5.8',
         'tensorflow',
         'tensorflow-tensorboard',
