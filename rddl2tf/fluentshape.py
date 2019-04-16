@@ -42,7 +42,7 @@ class TensorFluentShape(object):
         batch: The batch mode flag.
     '''
 
-    def __init__(self, shape: List[int], batch: bool) -> None:
+    def __init__(self, shape: Sequence[int], batch: bool) -> None:
         self._shape = tf.TensorShape(shape)
         self._batch = batch
 
