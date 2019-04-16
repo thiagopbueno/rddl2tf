@@ -689,9 +689,15 @@ class Compiler(object):
             high = self._compile_expression(args[1], scope, batch_size, noise)
             dist, sample = TensorFluent.Uniform(low, high, batch_size)
         elif etype[1] == 'Normal':
-            mean = self._compile_expression(args[0], scope)
-            variance = self._compile_expression(args[1], scope)
-            dist, sample = TensorFluent.Normal(mean, variance, batch_size)
+            if noise is None:
+                mean = self._compile_expression(args[0], scope, batch_size, noise)
+                variance = self._compile_expression(args[1], scope, batch_size, noise)
+                dist, sample = TensorFluent.Normal(mean, variance, batch_size)
+            else:
+                xi = noise.pop()
+                mean = self._compile_expression(args[0], scope, batch_size, noise)
+                variance = self._compile_expression(args[1], scope, batch_size, noise)
+                sample = mean + TensorFluent.sqrt(variance) * xi
         elif etype[1] == 'Laplace':
             mean = self._compile_expression(args[0], scope, batch_size, noise)
             variance = self._compile_expression(args[1], scope, batch_size, noise)

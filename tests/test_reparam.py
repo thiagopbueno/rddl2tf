@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
+import rddlgym
 
 from pyrddl.expr import Expression
 
@@ -27,6 +28,7 @@ class TestReparameterization(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+
         cls.zero = Expression(('number', 0.0))
         cls.one = Expression(('number', 1.0))
         cls.two = Expression(('+', (cls.one, cls.one)))
@@ -67,111 +69,158 @@ class TestReparameterization(unittest.TestCase):
         cls.y2 = Expression(('randomvar', ('Normal', (cls.mu, cls.exp_z))))
         cls.y3 = Expression(('randomvar', ('Normal', (cls.mu, cls.exp_x1))))
 
+    def setUp(self):
+        self.compiler = rddlgym.make('Navigation-v2', mode=rddlgym.SCG)
+        self.compiler.batch_mode_on()
+
     def test_standard_normal(self):
         noise = get_reparameterization(self.z, scope={})
         self.assertListEqual(noise, [('Normal', [1])])
+        self._test_reparameterized_expression(self.z, scope={}, noise=noise, name='noise')
 
     def test_multivariate_normal(self):
-        scope = {
-            'mu/1': TensorFluent(tf.zeros(32), scope=['?x']),
-            'sigma/1': TensorFluent(tf.ones(32), scope=['?x'])
-        }
+        with self.compiler.graph.as_default():
+            scope = {
+                'mu/1': TensorFluent(tf.zeros(32), scope=['?x']),
+                'sigma/1': TensorFluent(tf.ones(32), scope=['?x'])
+            }
 
         noise1 = get_reparameterization(self.x1, scope=scope)
         self.assertListEqual(noise1, [('Normal', [32])])
+        self._test_reparameterized_expression(self.x1, scope=scope, noise=noise1, name='noise1')
 
         noise2 = get_reparameterization(self.x2, scope=scope)
         self.assertListEqual(noise2, [('Normal', [32])])
+        self._test_reparameterized_expression(self.x2, scope=scope, noise=noise2, name='noise2')
 
         noise3 = get_reparameterization(self.x3, scope=scope)
         self.assertListEqual(noise3, [('Normal', [32])])
+        self._test_reparameterized_expression(self.x3, scope=scope, noise=noise3, name='noise3')
 
         noise4 = get_reparameterization(self.x4, scope=scope)
         self.assertListEqual(noise4, [('Normal', [1]), ('Normal', [1])])
+        self._test_reparameterized_expression(self.x4, scope=scope, noise=noise4, name='noise4')
 
         noise5 = get_reparameterization(self.x5, scope=scope)
         self.assertListEqual(noise5, [('Normal', [32]), ('Normal', [32])])
+        self._test_reparameterized_expression(self.x5, scope=scope, noise=noise5, name='noise5')
 
         noise6 = get_reparameterization(self.x6, scope=scope)
         self.assertListEqual(noise6, [('Normal', [32]), ('Normal', [32])])
+        self._test_reparameterized_expression(self.x6, scope=scope, noise=noise6, name='noise6')
 
         noise7 = get_reparameterization(self.x7, scope=scope)
         self.assertListEqual(noise7, [('Normal', [1]), ('Normal', [1]), ('Normal', [1])])
+        self._test_reparameterized_expression(self.x7, scope=scope, noise=noise7, name='noise7')
 
         noise8 = get_reparameterization(self.x8, scope=scope)
         self.assertListEqual(noise8, [('Normal', [1]), ('Normal', [1]), ('Normal', [32])])
+        self._test_reparameterized_expression(self.x8, scope=scope, noise=noise8, name='noise8')
 
         noise9 = get_reparameterization(self.x9, scope=scope)
         self.assertListEqual(noise9, [('Normal', [32]), ('Normal', [1]), ('Normal', [1]), ('Normal', [32])])
+        self._test_reparameterized_expression(self.x9, scope=scope, noise=noise9, name='noise9')
 
     def test_batch_normal(self):
-        scope = {
-            'mu/1': TensorFluent(tf.zeros((64, 16)), scope=['?x'], batch=True),
-            'sigma/1': TensorFluent(tf.ones((64, 16)), scope=['?x'], batch=True)
-        }
+        with self.compiler.graph.as_default():
+            scope = {
+                'mu/1': TensorFluent(tf.zeros((64, 16)), scope=['?x'], batch=True),
+                'sigma/1': TensorFluent(tf.ones((64, 16)), scope=['?x'], batch=True)
+            }
 
         noise1 = get_reparameterization(self.x1, scope=scope)
         self.assertListEqual(noise1, [('Normal', [64, 16])])
+        self._test_reparameterized_expression(self.x1, scope=scope, noise=noise1, name='noise1')
 
         noise2 = get_reparameterization(self.x2, scope=scope)
         self.assertListEqual(noise2, [('Normal', [64, 16])])
+        self._test_reparameterized_expression(self.x2, scope=scope, noise=noise2, name='noise2')
 
         noise3 = get_reparameterization(self.x3, scope=scope)
         self.assertListEqual(noise3, [('Normal', [64, 16])])
+        self._test_reparameterized_expression(self.x3, scope=scope, noise=noise3, name='noise3')
 
     def test_arithmetic(self):
-        scope = {
-            'mu/1': TensorFluent(tf.zeros(32), scope=['?x']),
-            'sigma/1': TensorFluent(tf.ones(32), scope=['?x'])
-        }
+        with self.compiler.graph.as_default():
+            scope = {
+                'mu/1': TensorFluent(tf.zeros(32), scope=['?x']),
+                'sigma/1': TensorFluent(tf.ones(32), scope=['?x'])
+            }
 
-        noise = get_reparameterization(self.two, scope={})
-        self.assertListEqual(noise, [])
+        noise1 = get_reparameterization(self.two, scope={})
+        self.assertListEqual(noise1, [])
+        self._test_reparameterized_expression(self.two, scope={}, noise=noise1, name='noise1')
 
-        noise = get_reparameterization(self.z_times_z, scope={})
-        self.assertListEqual(noise, [('Normal', [1]), ('Normal', [1])])
+        noise2 = get_reparameterization(self.z_times_z, scope={})
+        self.assertListEqual(noise2, [('Normal', [1]), ('Normal', [1])])
+        self._test_reparameterized_expression(self.z_times_z, scope={}, noise=noise2, name='noise2')
 
-        noise = get_reparameterization(self.x2_times_x2, scope=scope)
-        self.assertListEqual(noise, [('Normal', [32]), ('Normal', [32])])
+        noise3 = get_reparameterization(self.x2_times_x2, scope=scope)
+        self.assertListEqual(noise3, [('Normal', [32]), ('Normal', [32])])
+        self._test_reparameterized_expression(self.x2_times_x2, scope=scope, noise=noise3, name='noise3')
 
-        noise = get_reparameterization(self.mu_plus_z, scope=scope)
-        self.assertListEqual(noise, [('Normal', [1])])
+        noise4 = get_reparameterization(self.mu_plus_z, scope=scope)
+        self.assertListEqual(noise4, [('Normal', [1])])
+        self._test_reparameterized_expression(self.mu_plus_z, scope=scope, noise=noise4, name='noise4')
 
-        noise = get_reparameterization(self.z_plus_mu, scope=scope)
-        self.assertListEqual(noise, [('Normal', [1])])
+        noise5 = get_reparameterization(self.z_plus_mu, scope=scope)
+        self.assertListEqual(noise5, [('Normal', [1])])
+        self._test_reparameterized_expression(self.z_plus_mu, scope=scope, noise=noise5, name='noise5')
 
-        noise = get_reparameterization(self.mu_plus_x2, scope=scope)
-        self.assertListEqual(noise, [('Normal', [32])])
+        noise6 = get_reparameterization(self.mu_plus_x2, scope=scope)
+        self.assertListEqual(noise6, [('Normal', [32])])
+        self._test_reparameterized_expression(self.mu_plus_x2, scope=scope, noise=noise6, name='noise6')
 
-        noise = get_reparameterization(self.x2_plus_mu, scope=scope)
-        self.assertListEqual(noise, [('Normal', [32])])
+        noise7 = get_reparameterization(self.x2_plus_mu, scope=scope)
+        self.assertListEqual(noise7, [('Normal', [32])])
+        self._test_reparameterized_expression(self.x2_plus_mu, scope=scope, noise=noise7, name='noise7')
 
-        noise = get_reparameterization(self.x1_plus_z, scope=scope)
-        self.assertListEqual(noise, [('Normal', [32]), ('Normal', [1])])
+        noise8 = get_reparameterization(self.x1_plus_z, scope=scope)
+        self.assertListEqual(noise8, [('Normal', [32]), ('Normal', [1])])
+        self._test_reparameterized_expression(self.x1_plus_z, scope=scope, noise=noise8, name='noise8')
 
-        noise = get_reparameterization(self.z_plus_x1, scope=scope)
-        self.assertListEqual(noise, [('Normal', [1]), ('Normal', [32])])
+        noise9 = get_reparameterization(self.z_plus_x1, scope=scope)
+        self.assertListEqual(noise9, [('Normal', [1]), ('Normal', [32])])
+        self._test_reparameterized_expression(self.z_plus_x1, scope=scope, noise=noise9, name='noise9')
 
     def test_function(self):
-        scope = {
-            'mu/1': TensorFluent(tf.zeros(24), scope=['?x']),
-            'sigma/1': TensorFluent(tf.ones(24), scope=['?x'])
-        }
+        with self.compiler.graph.as_default():
+            scope = {
+                'mu/1': TensorFluent(tf.zeros(24), scope=['?x']),
+                'sigma/1': TensorFluent(tf.ones(24), scope=['?x'])
+            }
 
-        noise = get_reparameterization(self.exp_2, scope=scope)
+        noise1 = get_reparameterization(self.exp_2, scope=scope)
+        self.assertListEqual(noise1, [])
+        self._test_reparameterized_expression(self.exp_2, scope=scope, noise=noise1, name='noise1')
+
+        noise2 = get_reparameterization(self.exp_z, scope=scope)
+        self.assertListEqual(noise2, [('Normal', [1])])
+        self._test_reparameterized_expression(self.exp_z, scope=scope, noise=noise2, name='noise2')
+
+        noise3 = get_reparameterization(self.exp_x1, scope=scope)
+        self.assertListEqual(noise3, [('Normal', [24])])
+        self._test_reparameterized_expression(self.exp_x1, scope=scope, noise=noise3, name='noise3')
+
+        noise4 = get_reparameterization(self.y1, scope=scope)
+        self.assertListEqual(noise4, [('Normal', [1]), ('Normal', [1])])
+        self._test_reparameterized_expression(self.y1, scope=scope, noise=noise4, name='noise4')
+
+        noise5 = get_reparameterization(self.y2, scope=scope)
+        self.assertListEqual(noise5, [('Normal', [1]), ('Normal', [24])])
+        self._test_reparameterized_expression(self.y2, scope=scope, noise=noise5, name='noise5')
+
+        noise6 = get_reparameterization(self.y3, scope=scope)
+        self.assertListEqual(noise6, [('Normal', [24]), ('Normal', [24])])
+        self._test_reparameterized_expression(self.y3, scope=scope, noise=noise6, name='noise6')
+
+    def _test_reparameterized_expression(self, expr, scope, noise, name):
+        with self.compiler.graph.as_default():
+            with tf.variable_scope(name):
+                noise = [TensorFluent(
+                            tf.get_variable('noise_{}'.format(i), shape=shape),
+                            scope=[],
+                            batch=True) for i, (_, shape) in enumerate(noise)]
+                fluent = self.compiler._compile_expression(expr, scope, batch_size=10, noise=noise)
+        self.assertIsInstance(fluent, TensorFluent)
         self.assertListEqual(noise, [])
-
-        noise = get_reparameterization(self.exp_z, scope=scope)
-        self.assertListEqual(noise, [('Normal', [1])])
-
-        noise = get_reparameterization(self.exp_x1, scope=scope)
-        self.assertListEqual(noise, [('Normal', [24])])
-
-        noise = get_reparameterization(self.y1, scope=scope)
-        self.assertListEqual(noise, [('Normal', [1]), ('Normal', [1])])
-
-        noise = get_reparameterization(self.y2, scope=scope)
-        self.assertListEqual(noise, [('Normal', [1]), ('Normal', [24])])
-
-        noise = get_reparameterization(self.y3, scope=scope)
-        self.assertListEqual(noise, [('Normal', [24]), ('Normal', [24])])

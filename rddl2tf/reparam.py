@@ -93,4 +93,3 @@ def _broadcast(shape1: TensorFluentShape, shape2: TensorFluentShape) -> TensorFl
     x1, x2 = np.zeros(s1), np.zeros(s2)
     y = np.broadcast(x1, x2)
     return TensorFluentShape(y.shape, batch=(shape1.batch or shape2.batch))
-
