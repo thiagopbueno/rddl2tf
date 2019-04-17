@@ -21,9 +21,11 @@ from pyrddl.rddl import RDDL
 from rddl2tf.fluentshape import TensorFluentShape
 
 import numpy as np
+import tensorflow as tf
+
 from typing import Dict, List, Tuple
 
-Noise = List[Tuple[str, List[int]]]
+Noise = List[Tuple[tf.distributions.Distribution, List[int]]]
 ShapeScope = Dict[str, TensorFluentShape]
 
 
@@ -83,7 +85,8 @@ def _get_reparameterization(expr: Expression,
             mean_shape = _get_reparameterization(args[0], scope, noise)
             var_shape = _get_reparameterization(args[1], scope, noise)
             shape = _broadcast(mean_shape, var_shape)
-            noise.append(('Normal', shape.as_list()))
+            dist = tf.distributions.Normal(loc=0.0, scale=1.0)
+            noise.append((dist, shape.as_list()))
             return shape
     elif etype[0] in ['arithmetic', 'boolean', 'relational']:
         op1_shape = _get_reparameterization(args[0], scope, noise)
