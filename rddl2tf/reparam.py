@@ -16,25 +16,57 @@
 
 from pyrddl.expr import Expression
 
-from rddl2tf.fluent import TensorFluent
+from pyrddl.rddl import RDDL
+
 from rddl2tf.fluentshape import TensorFluentShape
 
 import numpy as np
 from typing import Dict, List, Tuple
 
 Noise = List[Tuple[str, List[int]]]
+ShapeScope = Dict[str, TensorFluentShape]
+
+
+def get_reparameterization_shape_scope(rddl: RDDL) -> ShapeScope:
+    scope = {
+        name: TensorFluentShape(size, batch=False)
+        for name, (_, size) in rddl.fluent_table.items()
+    }
+    return scope
+
+
+def get_cpfs_reparameterization(rddl: RDDL) -> Noise:
+    noise = get_intermediate_cpfs_reparameterization(rddl)
+    noise += get_state_cpfs_reparameterization(rddl)
+    return noise
+
+
+def get_state_cpfs_reparameterization(rddl: RDDL) -> Noise:
+    scope = get_reparameterization_shape_scope(rddl)
+    noise = []
+    for cpf in rddl.domain.state_cpfs:
+        noise.append((cpf.name, get_reparameterization(cpf.expr, scope)))
+    return noise
+
+
+def get_intermediate_cpfs_reparameterization(rddl: RDDL) -> Noise:
+    scope = get_reparameterization_shape_scope(rddl)
+    noise = []
+    for cpf in rddl.domain.intermediate_cpfs:
+        noise.append((cpf.name, get_reparameterization(cpf.expr, scope)))
+    return noise
 
 
 def get_reparameterization(expr: Expression,
-                           scope: Dict[str, TensorFluent]) -> Noise:
+                           scope: ShapeScope) -> Noise:
     noise = []
     _get_reparameterization(expr, scope, noise)
     return noise
 
 
 def _get_reparameterization(expr: Expression,
-                            scope: Dict[str, TensorFluent],
-                            noise: List) -> TensorFluentShape:
+                            scope: ShapeScope,
+                            noise: Noise) -> TensorFluentShape:
     etype = expr.etype
     args = expr.args
 
@@ -44,8 +76,8 @@ def _get_reparameterization(expr: Expression,
         name = expr._pvar_to_name(args)
         if name not in scope:
             raise ValueError('Variable {} not in scope.'.format(name))
-        fluent = scope[name]
-        return fluent.shape
+        shape = scope[name]
+        return shape
     elif etype[0] == 'randomvar':
         if etype[1] == 'Normal':
             mean_shape = _get_reparameterization(args[0], scope, noise)

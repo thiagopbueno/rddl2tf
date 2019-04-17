@@ -35,6 +35,8 @@ ArgsList = Optional[List[str]]
 InitializerPair = Tuple[Tuple[str, ArgsList], Value]
 InitializerList = List[InitializerPair]
 
+Noise = Dict[str, Sequence[tf.Tensor]]
+
 
 class Compiler(object):
     '''RDDL2TensorFlow compiler.
@@ -115,7 +117,8 @@ class Compiler(object):
 
     def cpfs(self,
              state: Sequence[tf.Tensor],
-             action: Sequence[tf.Tensor]) -> Tuple[List[TensorFluent], List[TensorFluent]]:
+             action: Sequence[tf.Tensor],
+             noise: Optional[Noise] = None) -> Tuple[List[TensorFluent], List[TensorFluent]]:
         '''Compiles the intermediate and next state fluent CPFs given
         the current `state` and `action`.
 
@@ -129,7 +132,7 @@ class Compiler(object):
         '''
         scope = self.transition_scope(state, action)
         batch_size = int(state[0].shape[0])
-        interm_fluents, next_state_fluents = self.compile_cpfs(scope, batch_size)
+        interm_fluents, next_state_fluents = self.compile_cpfs(scope, batch_size, noise)
         interms = [fluent for _, fluent in interm_fluents]
         next_state = [fluent for _, fluent in next_state_fluents]
         return interms, next_state
@@ -157,7 +160,8 @@ class Compiler(object):
 
     def compile_cpfs(self,
                      scope: Dict[str, TensorFluent],
-                     batch_size: Optional[int] = None) -> Tuple[List[CPFPair], List[CPFPair]]:
+                     batch_size: Optional[int] = None,
+                     noise: Optional[Noise] = None) -> Tuple[List[CPFPair], List[CPFPair]]:
         '''Compiles the intermediate and next state fluent CPFs given the current `state` and `action` scope.
 
         Args:
@@ -168,14 +172,15 @@ class Compiler(object):
             Tuple[List[CPFPair], List[CPFPair]]: A pair of lists of TensorFluent
             representing the intermediate and state CPFs.
         '''
-        interm_fluents = self.compile_intermediate_cpfs(scope, batch_size)
+        interm_fluents = self.compile_intermediate_cpfs(scope, batch_size, noise)
         scope.update(dict(interm_fluents))
-        next_state_fluents = self.compile_state_cpfs(scope, batch_size)
+        next_state_fluents = self.compile_state_cpfs(scope, batch_size, noise)
         return interm_fluents, next_state_fluents
 
     def compile_intermediate_cpfs(self,
                                   scope: Dict[str, TensorFluent],
-                                  batch_size: Optional[int] = None) -> List[CPFPair]:
+                                  batch_size: Optional[int] = None,
+                                  noise: Optional[Noise] = None) -> List[CPFPair]:
         '''Compiles the intermediate fluent CPFs given the current `state` and `action` scope.
 
         Args:
@@ -186,19 +191,26 @@ class Compiler(object):
             A list of intermediate fluent CPFs compiled to :obj:`rddl2tf.fluent.TensorFluent`.
         '''
         interm_fluents = []
+
         with self.graph.as_default():
             with tf.name_scope('intermediate_cpfs'):
+
                 for cpf in self.rddl.domain.intermediate_cpfs:
+                    cpf_noise = noise.get(cpf.name, None) if noise is not None else None
+
                     name_scope = utils.identifier(cpf.name)
                     with tf.name_scope(name_scope):
-                        t = self._compile_expression(cpf.expr, scope, batch_size)
+                        t = self._compile_expression(cpf.expr, scope, batch_size, cpf_noise)
+
                     interm_fluents.append((cpf.name, t))
                     scope[cpf.name] = t
-                return interm_fluents
+
+        return interm_fluents
 
     def compile_state_cpfs(self,
                            scope: Dict[str, TensorFluent],
-                           batch_size: Optional[int] = None) -> List[CPFPair]:
+                           batch_size: Optional[int] = None,
+                           noise: Optional[Noise] = None) -> List[CPFPair]:
         '''Compiles the next state fluent CPFs given the current `state` and `action` scope.
 
         Args:
@@ -209,16 +221,23 @@ class Compiler(object):
             A list of state fluent CPFs compiled to :obj:`rddl2tf.fluent.TensorFluent`.
         '''
         next_state_fluents = []
+
         with self.graph.as_default():
             with tf.name_scope('state_cpfs'):
+
                 for cpf in self.rddl.domain.state_cpfs:
+                    cpf_noise = noise.get(cpf.name, None) if noise is not None else None
+
                     name_scope = utils.identifier(cpf.name)
                     with tf.name_scope(name_scope):
-                        t = self._compile_expression(cpf.expr, scope, batch_size)
+                        t = self._compile_expression(cpf.expr, scope, batch_size, cpf_noise)
+
                     next_state_fluents.append((cpf.name, t))
+
                 key = lambda f: self.rddl.domain.next_state_fluent_ordering.index(f[0])
                 next_state_fluents = sorted(next_state_fluents, key=key)
-                return next_state_fluents
+
+        return next_state_fluents
 
     def compile_reward(self, scope: Dict[str, TensorFluent]) -> TensorFluent:
         '''Compiles the reward function given the fluent `scope`.
@@ -690,6 +709,7 @@ class Compiler(object):
                 dist, sample = TensorFluent.Normal(mean, variance, batch_size)
             else:
                 xi = noise.pop()
+                xi = TensorFluent(xi, scope=[], batch=True)
                 mean = self._compile_expression(args[0], scope, batch_size, noise)
                 variance = self._compile_expression(args[1], scope, batch_size, noise)
                 sample = mean + TensorFluent.sqrt(variance) * xi
