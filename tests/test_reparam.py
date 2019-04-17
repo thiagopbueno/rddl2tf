@@ -254,10 +254,8 @@ class TestReparameterization(unittest.TestCase):
     def _test_reparameterized_expression(self, expr, scope, noise, name):
         with self.compiler.graph.as_default():
             with tf.variable_scope(name):
-                noise = [TensorFluent(
-                            tf.get_variable('noise_{}'.format(i), shape=shape),
-                            scope=[],
-                            batch=True) for i, (_, shape) in enumerate(noise)]
+                noise = [tf.get_variable('noise_{}'.format(i), shape=shape)
+                            for i, (_, shape) in enumerate(noise)]
                 fluent = self.compiler._compile_expression(expr, scope, batch_size=10, noise=noise)
         self.assertIsInstance(fluent, TensorFluent)
         self.assertListEqual(noise, [])
