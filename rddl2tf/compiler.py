@@ -64,6 +64,13 @@ class Compiler(object):
         self.batch_mode = batch_mode
         self.graph = tf.Graph()
 
+        self._build()
+
+    def _build(self):
+        with self.graph.as_default():
+            with tf.name_scope('non_fluents'):
+                self._initialize_non_fluents()
+
     def batch_mode_on(self):
         '''Sets on the batch mode flag.'''
         self.batch_mode = True
@@ -78,10 +85,7 @@ class Compiler(object):
         Returns:
             Sequence[tf.Tensor]: A tuple of tensors.
         '''
-        with self.graph.as_default():
-            with tf.name_scope('non_fluents'):
-                self._initialize_non_fluents()
-                return self.non_fluents
+        return self.non_fluents
 
     def compile_initial_state(self, batch_size: Optional[int] = None) -> Sequence[tf.Tensor]:
         '''Returns a tuple of tensors representing the initial state fluents.
