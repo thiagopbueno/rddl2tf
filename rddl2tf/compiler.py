@@ -713,7 +713,8 @@ class Compiler(object):
                 dist, sample = TensorFluent.Normal(mean, variance, batch_size)
             else:
                 xi = noise.pop()
-                xi = TensorFluent(xi, scope=[], batch=True)
+                # xi = TensorFluent(xi, scope=[], batch=True)
+                xi = TensorFluent(2.0 * tf.tanh(xi / 2.0), scope=[], batch=True) # squashed noise
                 mean = self._compile_expression(args[0], scope, batch_size, noise)
                 variance = self._compile_expression(args[1], scope, batch_size, noise)
                 sample = mean + TensorFluent.sqrt(variance) * xi
