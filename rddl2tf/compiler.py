@@ -703,9 +703,18 @@ class Compiler(object):
             mean = self._compile_expression(args[0], scope, batch_size, noise)
             dist, sample = TensorFluent.Bernoulli(mean, batch_size)
         elif etype[1] == 'Uniform':
-            low = self._compile_expression(args[0], scope, batch_size, noise)
-            high = self._compile_expression(args[1], scope, batch_size, noise)
-            dist, sample = TensorFluent.Uniform(low, high, batch_size)
+            if noise is None:
+                low = self._compile_expression(args[0], scope, batch_size, noise)
+                high = self._compile_expression(args[1], scope, batch_size, noise)
+                dist, sample = TensorFluent.Uniform(low, high, batch_size)
+            else:
+                xi = noise.pop()
+                # xi = TensorFluent(xi, scope=[], batch=True)
+                xi = TensorFluent(tf.sigmoid(xi), scope=[], batch=True) # squashed noise
+                low = self._compile_expression(args[0], scope, batch_size, noise)
+                high = self._compile_expression(args[0], scope, batch_size, noise)
+                sample = low + (high - low) * xi
+
         elif etype[1] == 'Normal':
             if noise is None:
                 mean = self._compile_expression(args[0], scope, batch_size, noise)
@@ -727,8 +736,15 @@ class Compiler(object):
             scale = self._compile_expression(args[1], scope, batch_size, noise)
             dist, sample = TensorFluent.Gamma(shape, scale, batch_size)
         elif etype[1] == 'Exponential':
-            mean = self._compile_expression(args[0], scope, batch_size, noise)
-            dist, sample = TensorFluent.Exponential(mean, batch_size)
+            if noise is None:
+                rate = self._compile_expression(args[0], scope, batch_size, noise)
+                dist, sample = TensorFluent.Exponential(rate, batch_size)
+            else:
+                xi = noise.pop()
+                # xi = TensorFluent(xi, scope=[], batch=True)
+                xi = TensorFluent(tf.sigmoid(xi), scope=[], batch=True) # squashed noise
+                rate = self._compile_expression(args[0], scope, batch_size, noise)
+                sample = - (TensorFluent.constant(1.0) / rate) * TensorFluent.log(xi)
         else:
             raise ValueError('Invalid random variable expression:\n{}.'.format(expr))
 
