@@ -14,7 +14,7 @@
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
 
-from rddl2tf.fluentshape import TensorFluentShape
+from rddl2tf.core.fluentshape import TensorFluentShape
 
 import unittest
 

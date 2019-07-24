@@ -18,7 +18,7 @@ from pyrddl.rddl import RDDL
 from pyrddl.pvariable import PVariable
 from pyrddl.expr import Expression
 
-from rddl2tf.fluent import TensorFluent
+from rddl2tf.core.fluent import TensorFluent
 from rddl2tf import utils
 
 import numpy as np
@@ -44,7 +44,7 @@ class Compiler(object):
     This is the core component of rddl2tf package.
 
     Its API provides methods to compile RDDL fluents and expressions
-    to TensorFlow tensors wrapped as :obj:`rddl2tf.fluent.TensorFluent` objects.
+    to TensorFlow tensors wrapped as :obj:`rddl2tf.core.fluent.TensorFluent` objects.
     It supports constants, random variables, functions and operators
     used in most RDDL expressions. Also, it can handle next state
     and intermediate fluent CPFs, and rewards and action constraints.
@@ -169,7 +169,7 @@ class Compiler(object):
         '''Compiles the intermediate and next state fluent CPFs given the current `state` and `action` scope.
 
         Args:
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
             batch_size (Optional[int]): The batch size.
 
         Returns:
@@ -188,11 +188,11 @@ class Compiler(object):
         '''Compiles the intermediate fluent CPFs given the current `state` and `action` scope.
 
         Args:
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
             batch_size (Optional[int]): The batch size.
 
         Returns:
-            A list of intermediate fluent CPFs compiled to :obj:`rddl2tf.fluent.TensorFluent`.
+            A list of intermediate fluent CPFs compiled to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         interm_fluents = []
 
@@ -218,11 +218,11 @@ class Compiler(object):
         '''Compiles the next state fluent CPFs given the current `state` and `action` scope.
 
         Args:
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
             batch_size (Optional[int]): The batch size.
 
         Returns:
-            A list of state fluent CPFs compiled to :obj:`rddl2tf.fluent.TensorFluent`.
+            A list of state fluent CPFs compiled to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         next_state_fluents = []
 
@@ -247,10 +247,10 @@ class Compiler(object):
         '''Compiles the reward function given the fluent `scope`.
 
         Args:
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): The fluent scope for reward evaluation.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): The fluent scope for reward evaluation.
 
         Returns:
-            A :obj:`rddl2tf.fluent.TensorFluent` representing the reward function.
+            A :obj:`rddl2tf.core.fluent.TensorFluent` representing the reward function.
         '''
         reward_expr = self.rddl.domain.reward
         with self.graph.as_default():
@@ -267,7 +267,7 @@ class Compiler(object):
             action (Sequence[tf.Tensor]): The action fluents.
 
         Returns:
-            A list of :obj:`rddl2tf.fluent.TensorFluent`.
+            A list of :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         scope = self.transition_scope(state, action)
         constraints = []
@@ -288,7 +288,7 @@ class Compiler(object):
             action (Sequence[tf.Tensor]): The action fluents.
 
         Returns:
-            A list of :obj:`rddl2tf.fluent.TensorFluent`.
+            A list of :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         scope = self.action_precondition_scope(state, action)
         preconds = []
@@ -307,7 +307,7 @@ class Compiler(object):
             state (Sequence[tf.Tensor]): The current state fluents.
 
         Returns:
-            A list of :obj:`rddl2tf.fluent.TensorFluent`.
+            A list of :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         scope = self.state_invariant_scope(state)
         invariants = []
@@ -346,7 +346,7 @@ class Compiler(object):
 
         Returns:
             A mapping from action names to a pair of
-            :obj:`rddl2tf.fluent.TensorFluent` representing
+            :obj:`rddl2tf.core.fluent.TensorFluent` representing
             its lower and upper bounds.
         '''
         scope = self.action_precondition_scope(state)
@@ -380,7 +380,7 @@ class Compiler(object):
         '''Returns a partial scope with non-fluents.
 
         Returns:
-            A mapping from non-fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+            A mapping from non-fluent names to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         if self.__dict__.get('non_fluents') is None:
             self._initialize_non_fluents()
@@ -393,7 +393,7 @@ class Compiler(object):
             state_fluents (Sequence[tf.Tensor]): The current state fluents.
 
         Returns:
-            A mapping from state fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+            A mapping from state fluent names to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         return dict(zip(self.rddl.domain.state_fluent_ordering, state_fluents))
 
@@ -404,7 +404,7 @@ class Compiler(object):
             action_fluents (Sequence[tf.Tensor]): The action fluents.
 
         Returns:
-            A mapping from action fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+            A mapping from action fluent names to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         return dict(zip(self.rddl.domain.action_fluent_ordering, action_fluents))
 
@@ -415,7 +415,7 @@ class Compiler(object):
             next_state_fluents (Sequence[tf.Tensor]): The next state fluents.
 
         Returns:
-            A mapping from next state fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+            A mapping from next state fluent names to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         return dict(zip(self.rddl.domain.next_state_fluent_ordering, next_state_fluents))
 
@@ -430,7 +430,7 @@ class Compiler(object):
             action (Sequence[tf.Tensor]): The action fluents.
 
         Returns:
-            A mapping from fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+            A mapping from fluent names to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         scope = {}
         scope.update(self.non_fluents_scope())
@@ -451,7 +451,7 @@ class Compiler(object):
             next_state (Sequence[tf.Tensor]): The next state fluents.
 
         Returns:
-            A mapping from fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+            A mapping from fluent names to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         scope = {}
         scope.update(self.non_fluents_scope())
@@ -467,7 +467,7 @@ class Compiler(object):
             state (Sequence[tf.Tensor]): The current state fluents.
 
         Returns:
-            A mapping from fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+            A mapping from fluent names to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         scope = {}
         scope.update(self.non_fluents_scope())
@@ -485,7 +485,7 @@ class Compiler(object):
             action (Sequence[tf.Tensor]): The action fluents.
 
         Returns:
-            A mapping from fluent names to :obj:`rddl2tf.fluent.TensorFluent`.
+            A mapping from fluent names to :obj:`rddl2tf.core.fluent.TensorFluent`.
         '''
         scope = {}
         scope.update(self.non_fluents_scope())
@@ -596,11 +596,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled TensorFluent.
         '''
         etype2compiler = {
             'constant':    self._compile_constant_expression,
@@ -632,11 +632,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL constant expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args
@@ -654,11 +654,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL pvariable expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args
@@ -688,11 +688,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL random variable expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args
@@ -760,11 +760,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL arithmetic expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args
@@ -810,11 +810,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL boolean expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args
@@ -860,11 +860,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL relational expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args
@@ -898,11 +898,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL function expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args
@@ -962,11 +962,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL control flow expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args
@@ -989,11 +989,11 @@ class Compiler(object):
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL aggregation expression.
-            scope (Dict[str, :obj:`rddl2tf.fluent.TensorFluent`]): A fluent scope.
+            scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): A fluent scope.
             batch_size (Optional[size]): The batch size.
 
         Returns:
-            :obj:`rddl2tf.fluent.TensorFluent`: The compiled expression as a TensorFluent.
+            :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
         '''
         etype = expr.etype
         args = expr.args

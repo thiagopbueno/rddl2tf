@@ -14,7 +14,7 @@
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
 
-from rddl2tf.fluent import TensorFluent
+from rddl2tf.core.fluent import TensorFluent
 
 import numpy as np
 import tensorflow as tf

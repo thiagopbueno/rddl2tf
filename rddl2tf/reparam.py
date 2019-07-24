@@ -18,7 +18,7 @@ from pyrddl.expr import Expression
 
 from pyrddl.rddl import RDDL
 
-from rddl2tf.fluentshape import TensorFluentShape
+from rddl2tf.core.fluentshape import TensorFluentShape
 
 import numpy as np
 import tensorflow as tf

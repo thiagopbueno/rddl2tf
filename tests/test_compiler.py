@@ -20,8 +20,8 @@ from pyrddl.expr import Expression
 from pyrddl import utils
 
 from rddl2tf.compiler import Compiler
-from rddl2tf.fluent import TensorFluent
-from rddl2tf.fluentshape import TensorFluentShape
+from rddl2tf.core.fluent import TensorFluent
+from rddl2tf.core.fluentshape import TensorFluentShape
 
 import numpy as np
 import tensorflow as tf

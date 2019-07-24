@@ -17,8 +17,8 @@ import rddlgym
 
 from pyrddl.expr import Expression
 
-from rddl2tf.fluent import TensorFluent
-from rddl2tf.fluentshape import TensorFluentShape
+from rddl2tf.core.fluent import TensorFluent
+from rddl2tf.core.fluentshape import TensorFluentShape
 
 from rddl2tf.reparam import *
 

@@ -14,7 +14,7 @@
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
 
-from rddl2tf.fluentscope import TensorFluentScope
+from rddl2tf.core.fluentscope import TensorFluentScope
 
 import unittest
 
