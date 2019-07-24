@@ -1,4 +1,4 @@
-# rddl2tf [![Build Status](https://travis-ci.org/thiagopbueno/rddl2tf.svg?branch=master)](https://travis-ci.org/thiagopbueno/rddl2tf) [![Documentation Status](https://readthedocs.org/projects/rddl2tf/badge/?version=latest)](https://rddl2tf.readthedocs.io/en/latest/?badge=latest) [![License](https://img.shields.io/aur/license/yaourt.svg)](https://github.com/thiagopbueno/rddl2tf/blob/master/LICENSE)
+# rddl2tf [![Build Status](https://travis-ci.org/thiagopbueno/rddl2tf.svg?branch=master)](https://travis-ci.org/thiagopbueno/rddl2tf) [![Documentation Status](https://readthedocs.org/projects/rddl2tf/badge/?version=latest)](https://rddl2tf.readthedocs.io/en/latest/?badge=latest) [![License](https://img.shields.io/aur/license/yaourt.svg)](https://github.com/thiagopbueno/rddl2tf/blob/master/LICENSE.txt)
 
 RDDL2TensorFlow compiler in Python3.
 
