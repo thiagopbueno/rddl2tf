@@ -88,6 +88,21 @@ def _get_reparameterization(expr: Expression,
             dist = tf.distributions.Normal(loc=0.0, scale=1.0)
             noise.append((dist, shape.as_list()))
             return shape
+        elif etype[1] == 'Exponential':
+            rate_shape = _get_reparameterization(args[0], scope, noise)
+            dist = tf.distributions.Uniform(low=0.0, high=1.0)
+            noise.append((dist, rate_shape.as_list()))
+            return rate_shape
+        elif etype[1] == 'Gamma':
+            raise NotImplementedError
+        elif etype[1] == 'Uniform':
+            low_shape = _get_reparameterization(args[0], scope, noise)
+            high_shape = _get_reparameterization(args[1], scope, noise)
+            shape = _broadcast(low_shape, high_shape)
+            dist = tf.distributions.Uniform(low=0.0, high=1.0)
+            noise.append((dist, shape.as_list()))
+            return shape
+
     elif etype[0] in ['arithmetic', 'boolean', 'relational']:
         op1_shape = _get_reparameterization(args[0], scope, noise)
         shape = op1_shape

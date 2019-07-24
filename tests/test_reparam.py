@@ -71,6 +71,14 @@ class TestReparameterization(unittest.TestCase):
         cls.y2 = Expression(('randomvar', ('Normal', (cls.mu, cls.exp_z))))
         cls.y3 = Expression(('randomvar', ('Normal', (cls.mu, cls.exp_x1))))
 
+        cls.gamma_shape = Expression(('pvar_expr', ('shape', ['?r'])))
+        cls.gamma_scale = Expression(('pvar_expr', ('scale', ['?r'])))
+        cls.gamma1 = Expression(('randomvar', ('Gamma', (cls.gamma_shape, cls.gamma_scale))))
+
+        cls.exp_rate = Expression(('pvar_expr', ('rate', ['?r'])))
+        cls.exp1 = Expression(('randomvar', ('Exponential', (cls.exp_rate,))))
+
+
     def setUp(self):
         self.compiler = rddlgym.make('Navigation-v2', mode=rddlgym.SCG)
         self.compiler.batch_mode_on()
@@ -166,6 +174,41 @@ class TestReparameterization(unittest.TestCase):
         noise3 = get_reparameterization(self.x3, scope=shape_scope)
         self._test_reparameterization_dist(noise3, [('Normal', [64, 16])])
         self._test_reparameterized_expression(self.x3, scope=scope, noise=noise3, name='noise3')
+
+    @unittest.skip('not implemented')
+    def test_gamma(self):
+        # rainfall(?r) = Gamma(RAIN_SHAPE(?r), RAIN_SCALE(?r));
+        with self.compiler.graph.as_default():
+            shape_scope = {
+                'shape/1': TensorFluentShape((32, 8), batch=True),
+                'scale/1': TensorFluentShape((32, 8), batch=True)
+            }
+
+            scope = {
+                'shape/1': TensorFluent(tf.ones((32, 8)), scope=['?r'], batch=True),
+                'scale/1': TensorFluent(tf.ones((32, 8)), scope=['?r'], batch=True)
+            }
+
+        noise1 = get_reparameterization(self.gamma1, scope=shape_scope)
+        self._test_reparameterization_dist(noise1, [('Gamma', [32, 8])])
+        self._test_reparameterized_expression(self.gamma1, scope=scope, noise=noise1, name='noise1')
+
+
+    def test_exponential(self):
+        # rainfall(?r) = Exponential(RAIN_RATE(?r));
+        with self.compiler.graph.as_default():
+            shape_scope = {
+                'rate/1': TensorFluentShape((32, 8), batch=True)
+            }
+
+            scope = {
+                'rate/1': TensorFluent(tf.ones((32, 8)), scope=['?r'], batch=True)
+            }
+
+        noise1 = get_reparameterization(self.exp1, scope=shape_scope)
+        self._test_reparameterization_dist(noise1, [('Uniform', [32, 8])])
+        self._test_reparameterized_expression(self.exp1, scope=scope, noise=noise1, name='noise1')
+
 
     def test_arithmetic(self):
         with self.compiler.graph.as_default():
@@ -265,6 +308,6 @@ class TestReparameterization(unittest.TestCase):
             with tf.variable_scope(name):
                 noise = [tf.get_variable('noise_{}'.format(i), shape=shape)
                             for i, (_, shape) in enumerate(noise)]
-                fluent = self.compiler._compile_expression(expr, scope, batch_size=10, noise=noise)
+                fluent = self.compiler._compile_expression(expr, scope, batch_size=16, noise=noise)
         self.assertIsInstance(fluent, TensorFluent)
         self.assertListEqual(noise, [])
