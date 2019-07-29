@@ -41,7 +41,7 @@ def python_type_to_dtype(python_type: type) -> Optional[tf.DType]:
     return dtype
 
 
-def identifier(name):
+def identifier(name: str):
     name = name.replace("'", '')
     name = name.replace('/', '-')
     return name
