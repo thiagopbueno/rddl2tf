@@ -20,7 +20,7 @@ from pyrddl.expr import Expression
 from rddl2tf.core.fluent import TensorFluent
 from rddl2tf.core.fluentshape import TensorFluentShape
 
-from rddl2tf.reparam import *
+from rddl2tf import ReparameterizationCompiler
 
 import tensorflow as tf
 import unittest
@@ -80,26 +80,27 @@ class TestReparameterization(unittest.TestCase):
 
 
     def setUp(self):
-        self.compiler = rddlgym.make('Navigation-v2', mode=rddlgym.SCG)
-        self.compiler.batch_mode_on()
+        self.rddl = rddlgym.make('Navigation-v2', mode=rddlgym.AST)
+        self.compiler = ReparameterizationCompiler(self.rddl)
+        self.compiler.init()
 
     def test_get_shape_scope(self):
-        scope = get_reparameterization_shape_scope(self.compiler.rddl)
+        scope = self.compiler._get_reparameterization_shape_scope()
         self.assertEqual(len(scope), len(self.compiler.rddl.fluent_table))
         for name, fluent_shape in scope.items():
             self.assertIsInstance(fluent_shape, TensorFluentShape)
             self.assertListEqual(fluent_shape.as_list(), list(self.compiler.rddl.fluent_table[name][1]))
 
     def test_get_state_cpfs_reparameterization(self):
-        noise = get_state_cpfs_reparameterization(self.compiler.rddl)
+        noise = self.compiler.get_state_cpfs_reparameterization()
         self._test_cpf_reparameterization_dist(noise, [("location'/1", [('Normal', [2])])])
 
     def test_get_intermediate_cpfs_reparameterization(self):
-        noise = get_intermediate_cpfs_reparameterization(self.compiler.rddl)
+        noise = self.compiler.get_intermediate_cpfs_reparameterization()
         self._test_cpf_reparameterization_dist(noise, [('distance/1', []), ('deceleration/1', [])])
 
     def test_standard_normal(self):
-        noise = get_reparameterization(self.z, scope={})
+        noise = self.compiler._get_expression_reparameterization(self.z, scope={})
         self._test_reparameterization_dist(noise, [('Normal', [1])])
         self._test_reparameterized_expression(self.z, scope={}, noise=noise, name='noise')
 
@@ -115,39 +116,39 @@ class TestReparameterization(unittest.TestCase):
                 'sigma/1': TensorFluent(tf.ones([32]), scope=['?x'], batch=False)
             }
 
-        noise1 = get_reparameterization(self.x1, scope=shape_scope)
+        noise1 = self.compiler._get_expression_reparameterization(self.x1, scope=shape_scope)
         self._test_reparameterization_dist(noise1, [('Normal', [32])])
         self._test_reparameterized_expression(self.x1, scope=scope, noise=noise1, name='noise1')
 
-        noise2 = get_reparameterization(self.x2, scope=shape_scope)
+        noise2 = self.compiler._get_expression_reparameterization(self.x2, scope=shape_scope)
         self._test_reparameterization_dist(noise2, [('Normal', [32])])
         self._test_reparameterized_expression(self.x2, scope=scope, noise=noise2, name='noise2')
 
-        noise3 = get_reparameterization(self.x3, scope=shape_scope)
+        noise3 = self.compiler._get_expression_reparameterization(self.x3, scope=shape_scope)
         self._test_reparameterization_dist(noise3, [('Normal', [32])])
         self._test_reparameterized_expression(self.x3, scope=scope, noise=noise3, name='noise3')
 
-        noise4 = get_reparameterization(self.x4, scope=shape_scope)
+        noise4 = self.compiler._get_expression_reparameterization(self.x4, scope=shape_scope)
         self._test_reparameterization_dist(noise4, [('Normal', [1]), ('Normal', [1])])
         self._test_reparameterized_expression(self.x4, scope=scope, noise=noise4, name='noise4')
 
-        noise5 = get_reparameterization(self.x5, scope=shape_scope)
+        noise5 = self.compiler._get_expression_reparameterization(self.x5, scope=shape_scope)
         self._test_reparameterization_dist(noise5, [('Normal', [32]), ('Normal', [32])])
         self._test_reparameterized_expression(self.x5, scope=scope, noise=noise5, name='noise5')
 
-        noise6 = get_reparameterization(self.x6, scope=shape_scope)
+        noise6 = self.compiler._get_expression_reparameterization(self.x6, scope=shape_scope)
         self._test_reparameterization_dist(noise6, [('Normal', [32]), ('Normal', [32])])
         self._test_reparameterized_expression(self.x6, scope=scope, noise=noise6, name='noise6')
 
-        noise7 = get_reparameterization(self.x7, scope=shape_scope)
+        noise7 = self.compiler._get_expression_reparameterization(self.x7, scope=shape_scope)
         self._test_reparameterization_dist(noise7, [('Normal', [1]), ('Normal', [1]), ('Normal', [1])])
         self._test_reparameterized_expression(self.x7, scope=scope, noise=noise7, name='noise7')
 
-        noise8 = get_reparameterization(self.x8, scope=shape_scope)
+        noise8 = self.compiler._get_expression_reparameterization(self.x8, scope=shape_scope)
         self._test_reparameterization_dist(noise8, [('Normal', [1]), ('Normal', [1]), ('Normal', [32])])
         self._test_reparameterized_expression(self.x8, scope=scope, noise=noise8, name='noise8')
 
-        noise9 = get_reparameterization(self.x9, scope=shape_scope)
+        noise9 = self.compiler._get_expression_reparameterization(self.x9, scope=shape_scope)
         self._test_reparameterization_dist(noise9, [('Normal', [32]), ('Normal', [1]), ('Normal', [1]), ('Normal', [32])])
         self._test_reparameterized_expression(self.x9, scope=scope, noise=noise9, name='noise9')
 
@@ -163,15 +164,15 @@ class TestReparameterization(unittest.TestCase):
                 'sigma/1': TensorFluent(tf.ones([64, 16]), scope=['?x'], batch=True)
             }
 
-        noise1 = get_reparameterization(self.x1, scope=shape_scope)
+        noise1 = self.compiler._get_expression_reparameterization(self.x1, scope=shape_scope)
         self._test_reparameterization_dist(noise1, [('Normal', [64, 16])])
         self._test_reparameterized_expression(self.x1, scope=scope, noise=noise1, name='noise1')
 
-        noise2 = get_reparameterization(self.x2, scope=shape_scope)
+        noise2 = self.compiler._get_expression_reparameterization(self.x2, scope=shape_scope)
         self._test_reparameterization_dist(noise2, [('Normal', [64, 16])])
         self._test_reparameterized_expression(self.x2, scope=scope, noise=noise2, name='noise2')
 
-        noise3 = get_reparameterization(self.x3, scope=shape_scope)
+        noise3 = self.compiler._get_expression_reparameterization(self.x3, scope=shape_scope)
         self._test_reparameterization_dist(noise3, [('Normal', [64, 16])])
         self._test_reparameterized_expression(self.x3, scope=scope, noise=noise3, name='noise3')
 
@@ -189,7 +190,7 @@ class TestReparameterization(unittest.TestCase):
                 'scale/1': TensorFluent(tf.ones((32, 8)), scope=['?r'], batch=True)
             }
 
-        noise1 = get_reparameterization(self.gamma1, scope=shape_scope)
+        noise1 = self.compiler._get_expression_reparameterization(self.gamma1, scope=shape_scope)
         self._test_reparameterization_dist(noise1, [('Gamma', [32, 8])])
         self._test_reparameterized_expression(self.gamma1, scope=scope, noise=noise1, name='noise1')
 
@@ -205,7 +206,7 @@ class TestReparameterization(unittest.TestCase):
                 'rate/1': TensorFluent(tf.ones((32, 8)), scope=['?r'], batch=True)
             }
 
-        noise1 = get_reparameterization(self.exp1, scope=shape_scope)
+        noise1 = self.compiler._get_expression_reparameterization(self.exp1, scope=shape_scope)
         self._test_reparameterization_dist(noise1, [('Uniform', [32, 8])])
         self._test_reparameterized_expression(self.exp1, scope=scope, noise=noise1, name='noise1')
 
@@ -222,39 +223,39 @@ class TestReparameterization(unittest.TestCase):
                 'sigma/1': TensorFluent(tf.ones([32]), scope=['?x'], batch=False)
             }
 
-        noise1 = get_reparameterization(self.two, scope={})
+        noise1 = self.compiler._get_expression_reparameterization(self.two, scope={})
         self._test_reparameterization_dist(noise1, [])
         self._test_reparameterized_expression(self.two, scope={}, noise=noise1, name='noise1')
 
-        noise2 = get_reparameterization(self.z_times_z, scope={})
+        noise2 = self.compiler._get_expression_reparameterization(self.z_times_z, scope={})
         self._test_reparameterization_dist(noise2, [('Normal', [1]), ('Normal', [1])])
         self._test_reparameterized_expression(self.z_times_z, scope={}, noise=noise2, name='noise2')
 
-        noise3 = get_reparameterization(self.x2_times_x2, scope=shape_scope)
+        noise3 = self.compiler._get_expression_reparameterization(self.x2_times_x2, scope=shape_scope)
         self._test_reparameterization_dist(noise3, [('Normal', [32]), ('Normal', [32])])
         self._test_reparameterized_expression(self.x2_times_x2, scope=scope, noise=noise3, name='noise3')
 
-        noise4 = get_reparameterization(self.mu_plus_z, scope=shape_scope)
+        noise4 = self.compiler._get_expression_reparameterization(self.mu_plus_z, scope=shape_scope)
         self._test_reparameterization_dist(noise4, [('Normal', [1])])
         self._test_reparameterized_expression(self.mu_plus_z, scope=scope, noise=noise4, name='noise4')
 
-        noise5 = get_reparameterization(self.z_plus_mu, scope=shape_scope)
+        noise5 = self.compiler._get_expression_reparameterization(self.z_plus_mu, scope=shape_scope)
         self._test_reparameterization_dist(noise5, [('Normal', [1])])
         self._test_reparameterized_expression(self.z_plus_mu, scope=scope, noise=noise5, name='noise5')
 
-        noise6 = get_reparameterization(self.mu_plus_x2, scope=shape_scope)
+        noise6 = self.compiler._get_expression_reparameterization(self.mu_plus_x2, scope=shape_scope)
         self._test_reparameterization_dist(noise6, [('Normal', [32])])
         self._test_reparameterized_expression(self.mu_plus_x2, scope=scope, noise=noise6, name='noise6')
 
-        noise7 = get_reparameterization(self.x2_plus_mu, scope=shape_scope)
+        noise7 = self.compiler._get_expression_reparameterization(self.x2_plus_mu, scope=shape_scope)
         self._test_reparameterization_dist(noise7, [('Normal', [32])])
         self._test_reparameterized_expression(self.x2_plus_mu, scope=scope, noise=noise7, name='noise7')
 
-        noise8 = get_reparameterization(self.x1_plus_z, scope=shape_scope)
+        noise8 = self.compiler._get_expression_reparameterization(self.x1_plus_z, scope=shape_scope)
         self._test_reparameterization_dist(noise8, [('Normal', [32]), ('Normal', [1])])
         self._test_reparameterized_expression(self.x1_plus_z, scope=scope, noise=noise8, name='noise8')
 
-        noise9 = get_reparameterization(self.z_plus_x1, scope=shape_scope)
+        noise9 = self.compiler._get_expression_reparameterization(self.z_plus_x1, scope=shape_scope)
         self._test_reparameterization_dist(noise9, [('Normal', [1]), ('Normal', [32])])
         self._test_reparameterized_expression(self.z_plus_x1, scope=scope, noise=noise9, name='noise9')
 
@@ -270,27 +271,27 @@ class TestReparameterization(unittest.TestCase):
                 'sigma/1': TensorFluent(tf.ones([24]), scope=['?x'], batch=False)
             }
 
-        noise1 = get_reparameterization(self.exp_2, scope=shape_scope)
+        noise1 = self.compiler._get_expression_reparameterization(self.exp_2, scope=shape_scope)
         self._test_reparameterization_dist(noise1, [])
         self._test_reparameterized_expression(self.exp_2, scope=scope, noise=noise1, name='noise1')
 
-        noise2 = get_reparameterization(self.exp_z, scope=shape_scope)
+        noise2 = self.compiler._get_expression_reparameterization(self.exp_z, scope=shape_scope)
         self._test_reparameterization_dist(noise2, [('Normal', [1])])
         self._test_reparameterized_expression(self.exp_z, scope=scope, noise=noise2, name='noise2')
 
-        noise3 = get_reparameterization(self.exp_x1, scope=shape_scope)
+        noise3 = self.compiler._get_expression_reparameterization(self.exp_x1, scope=shape_scope)
         self._test_reparameterization_dist(noise3, [('Normal', [24])])
         self._test_reparameterized_expression(self.exp_x1, scope=scope, noise=noise3, name='noise3')
 
-        noise4 = get_reparameterization(self.y1, scope=shape_scope)
+        noise4 = self.compiler._get_expression_reparameterization(self.y1, scope=shape_scope)
         self._test_reparameterization_dist(noise4, [('Normal', [1]), ('Normal', [1])])
         self._test_reparameterized_expression(self.y1, scope=scope, noise=noise4, name='noise4')
 
-        noise5 = get_reparameterization(self.y2, scope=shape_scope)
+        noise5 = self.compiler._get_expression_reparameterization(self.y2, scope=shape_scope)
         self._test_reparameterization_dist(noise5, [('Normal', [1]), ('Normal', [24])])
         self._test_reparameterized_expression(self.y2, scope=scope, noise=noise5, name='noise5')
 
-        noise6 = get_reparameterization(self.y3, scope=shape_scope)
+        noise6 = self.compiler._get_expression_reparameterization(self.y3, scope=shape_scope)
         self._test_reparameterization_dist(noise6, [('Normal', [24]), ('Normal', [24])])
         self._test_reparameterized_expression(self.y3, scope=scope, noise=noise6, name='noise6')
 
