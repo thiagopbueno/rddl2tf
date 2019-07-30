@@ -178,8 +178,8 @@ class ReparameterizationCompiler(DefaultCompiler):
         return sample
 
     def get_cpfs_reparameterization(self) -> NoiseMap:
-        noise = get_intermediate_cpfs_reparameterization()
-        noise += get_state_cpfs_reparameterization()
+        noise = self.get_intermediate_cpfs_reparameterization()
+        noise += self.get_state_cpfs_reparameterization()
         return noise
 
     def get_state_cpfs_reparameterization(self) -> NoiseMap:
