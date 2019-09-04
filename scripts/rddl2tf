@@ -22,7 +22,7 @@ import tensorflow as tf
 import rddlgym
 
 from rddl2tf import version
-from rddl2tf.compiler import Compiler
+from rddl2tf.compilers.compiler import Compiler
 
 
 def parse_args():

@@ -4,7 +4,7 @@ rddl2tf package
 Submodules
 ----------
 
-rddl2tf.compiler module
+rddl2tf.compilers.compiler module
 -----------------------
 
 .. automodule:: rddl2tf.compiler
