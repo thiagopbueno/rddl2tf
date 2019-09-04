@@ -20,6 +20,7 @@ from pyrddl.rddl import RDDL
 from rddl2tf.compilers.modes.default import DefaultCompiler
 from rddl2tf.core.fluent import TensorFluent
 from rddl2tf.core.fluentshape import TensorFluentShape
+from rddl2tf import utils
 
 import numpy as np
 import tensorflow as tf
