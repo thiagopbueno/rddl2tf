@@ -36,7 +36,7 @@ NoiseMap = List[Tuple[str, NoiseList]]
 
 
 class ReparameterizationCompiler(DefaultCompiler):
-    '''Reparameterization-based Compiler class.
+    """Reparameterization-based Compiler class.
 
     This extends the DefaultCompiler in order to support the compilation of
     constants, functions and operators used in most RDDL expressions.
@@ -47,16 +47,15 @@ class ReparameterizationCompiler(DefaultCompiler):
     Args:
         rddl (:obj:`pyrddl.rddl.RDDL`): The RDDL model.
         batch_size (int): The batch size of all compiled TensorFluent objects.
-    '''
+    """
 
-
-    def __init__(self, rddl: RDDL, batch_size: Optional[int] = 128) -> None:
+    def __init__(self, rddl: RDDL, batch_size: Optional[int] = 1) -> None:
         super(DefaultCompiler, self).__init__(rddl, batch_size)
 
-    def _compile_intermediate_cpfs(self,
-                                  scope: Dict[str, TensorFluent],
-                                  **kwargs) -> List[CPFPair]:
-        '''Compiles the intermediate fluent CPFs given the current `state` and `action` scope.
+    def _compile_intermediate_cpfs(
+        self, scope: Dict[str, TensorFluent], **kwargs
+    ) -> List[CPFPair]:
+        """Compiles the intermediate fluent CPFs given the current `state` and `action` scope.
 
         Args:
             scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
@@ -64,13 +63,13 @@ class ReparameterizationCompiler(DefaultCompiler):
 
         Returns:
             A list of intermediate fluent CPFs compiled to :obj:`rddl2tf.core.fluent.TensorFluent`.
-        '''
-        noise = kwargs['noise']
+        """
+        noise = kwargs["noise"]
 
         interm_fluents = []
 
         with self.graph.as_default():
-            with tf.name_scope('intermediate_cpfs'):
+            with tf.name_scope("intermediate_cpfs"):
 
                 for cpf in self.rddl.domain.intermediate_cpfs:
                     cpf_noise = noise.get(cpf.name)
@@ -84,10 +83,10 @@ class ReparameterizationCompiler(DefaultCompiler):
 
         return interm_fluents
 
-    def _compile_state_cpfs(self,
-                           scope: Dict[str, TensorFluent],
-                           **kwargs) -> List[CPFPair]:
-        '''Compiles the next state fluent CPFs given the current `state` and `action` scope.
+    def _compile_state_cpfs(
+        self, scope: Dict[str, TensorFluent], **kwargs
+    ) -> List[CPFPair]:
+        """Compiles the next state fluent CPFs given the current `state` and `action` scope.
 
         Args:
             scope (Dict[str, :obj:`rddl2tf.core.fluent.TensorFluent`]): The fluent scope for CPF evaluation.
@@ -95,13 +94,13 @@ class ReparameterizationCompiler(DefaultCompiler):
 
         Returns:
             A list of state fluent CPFs compiled to :obj:`rddl2tf.core.fluent.TensorFluent`.
-        '''
-        noise = kwargs['noise']
+        """
+        noise = kwargs["noise"]
 
         next_state_fluents = []
 
         with self.graph.as_default():
-            with tf.name_scope('state_cpfs'):
+            with tf.name_scope("state_cpfs"):
 
                 for cpf in self.rddl.domain.state_cpfs:
                     cpf_noise = noise.get(cpf.name)
@@ -117,11 +116,10 @@ class ReparameterizationCompiler(DefaultCompiler):
 
         return next_state_fluents
 
-    def _compile_random_variable_expression(self,
-                                           expr: Expression,
-                                           scope: Dict[str, TensorFluent],
-                                           **kwargs) -> TensorFluent:
-        '''Compile a random variable expression `expr` into a TensorFluent
+    def _compile_random_variable_expression(
+        self, expr: Expression, scope: Dict[str, TensorFluent], **kwargs
+    ) -> TensorFluent:
+        """Compile a random variable expression `expr` into a TensorFluent
         in the given `scope` with optional batch size.
 
         If `reparam` tensor is given, then it conditionally stops gradient
@@ -137,44 +135,42 @@ class ReparameterizationCompiler(DefaultCompiler):
 
         Returns:
             :obj:`rddl2tf.core.fluent.TensorFluent`: The compiled expression as a TensorFluent.
-        '''
+        """
         etype = expr.etype
         args = expr.args
 
-        noise = kwargs['noise']
+        noise = kwargs["noise"]
 
-        if etype[1] == 'KronDelta':
+        if etype[1] == "KronDelta":
             sample = self._compile_expression(args[0], scope, **kwargs)
-        elif etype[1] == 'Bernoulli':
+        elif etype[1] == "Bernoulli":
             mean = self._compile_expression(args[0], scope, **kwargs)
             dist, sample = TensorFluent.Bernoulli(mean, self.batch_size)
-        elif etype[1] == 'Uniform':
+        elif etype[1] == "Uniform":
             xi = noise.pop()
             xi = TensorFluent(tf.sigmoid(xi), scope=[], batch=True)
             low = self._compile_expression(args[0], scope, **kwargs)
             high = self._compile_expression(args[0], scope, **kwargs)
             sample = low + (high - low) * xi
-        elif etype[1] == 'Normal':
+        elif etype[1] == "Normal":
             xi = noise.pop()
             xi = TensorFluent(2.0 * tf.tanh(xi / 2.0), scope=[], batch=True)
             mean = self._compile_expression(args[0], scope, **kwargs)
             variance = self._compile_expression(args[1], scope, **kwargs)
             sample = mean + TensorFluent.sqrt(variance) * xi
-        elif etype[1] == 'Laplace':
+        elif etype[1] == "Laplace":
             mean = self._compile_expression(args[0], scope, **kwargs)
             variance = self._compile_expression(args[1], scope, **kwargs)
             dist, sample = TensorFluent.Laplace(mean, variance, self.batch_size)
-        elif etype[1] == 'Gamma':
-            shape = self._compile_expression(args[0], scope, **kwargs)
-            scale = self._compile_expression(args[1], scope, **kwargs)
-            dist, sample = TensorFluent.Gamma(shape, scale, self.batch_size)
-        elif etype[1] == 'Exponential':
+        elif etype[1] == "Gamma":
+            sample = noise.pop()
+        elif etype[1] == "Exponential":
             xi = noise.pop()
             xi = TensorFluent(tf.sigmoid(xi), scope=[], batch=True)
             rate = self._compile_expression(args[0], scope, **kwargs)
-            sample = - (TensorFluent.constant(1.0) / rate) * TensorFluent.log(xi)
+            sample = -(TensorFluent.constant(1.0) / rate) * TensorFluent.log(xi)
         else:
-            raise ValueError('Invalid random variable expression:\n{}.'.format(expr))
+            raise ValueError("Invalid random variable expression:\n{}.".format(expr))
 
         return sample
 
@@ -187,14 +183,18 @@ class ReparameterizationCompiler(DefaultCompiler):
         scope = self._get_reparameterization_shape_scope()
         noise = []
         for cpf in self.rddl.domain.state_cpfs:
-            noise.append((cpf.name, self._get_expression_reparameterization(cpf.expr, scope)))
+            noise.append(
+                (cpf.name, self._get_expression_reparameterization(cpf.expr, scope))
+            )
         return noise
 
     def get_intermediate_cpfs_reparameterization(self) -> NoiseMap:
         scope = self._get_reparameterization_shape_scope()
         noise = []
         for cpf in self.rddl.domain.intermediate_cpfs:
-            noise.append((cpf.name, self._get_expression_reparameterization(cpf.expr, scope)))
+            noise.append(
+                (cpf.name, self._get_expression_reparameterization(cpf.expr, scope))
+            )
         return noise
 
     def _get_reparameterization_shape_scope(self) -> ShapeScope:
@@ -204,58 +204,77 @@ class ReparameterizationCompiler(DefaultCompiler):
         }
         return scope
 
-    def _get_expression_reparameterization(self,
-            expr: Expression,
-            scope: ShapeScope) -> NoiseList:
+    def _get_expression_reparameterization(
+        self, expr: Expression, scope: ShapeScope
+    ) -> NoiseList:
         noise = []
         self._get_reparameterization(expr, scope, noise)
         return noise
 
-    def _get_reparameterization(self,
-            expr: Expression,
-            scope: ShapeScope,
-            noise: NoiseList) -> TensorFluentShape:
+    def _get_reparameterization(
+        self, expr: Expression, scope: ShapeScope, noise: NoiseList
+    ) -> TensorFluentShape:
         etype = expr.etype
         args = expr.args
 
-        if etype[0] == 'constant':
+        if etype[0] == "constant":
             return TensorFluentShape([1], batch=False)
-        elif etype[0] == 'pvar':
+        elif etype[0] == "pvar":
             name = expr._pvar_to_name(args)
             if name not in scope:
-                raise ValueError('Variable {} not in scope.'.format(name))
+                raise ValueError("Variable {} not in scope.".format(name))
             shape = scope[name]
             return shape
-        elif etype[0] == 'randomvar':
-            if etype[1] == 'Normal':
+        elif etype[0] == "randomvar":
+            if etype[1] == "Normal":
                 mean_shape = self._get_reparameterization(args[0], scope, noise)
                 var_shape = self._get_reparameterization(args[1], scope, noise)
                 shape = ReparameterizationCompiler._broadcast(mean_shape, var_shape)
                 dist = tf.distributions.Normal(loc=0.0, scale=1.0)
                 noise.append((dist, shape.as_list()))
                 return shape
-            elif etype[1] == 'Exponential':
+            elif etype[1] == "Exponential":
                 rate_shape = self._get_reparameterization(args[0], scope, noise)
                 dist = tf.distributions.Uniform(low=0.0, high=1.0)
                 noise.append((dist, rate_shape.as_list()))
                 return rate_shape
-            elif etype[1] == 'Gamma':
-                raise NotImplementedError
-            elif etype[1] == 'Uniform':
+            elif etype[1] == "Gamma":
+
+                for fluent in self.rddl.get_dependencies(expr):
+                    if fluent.is_state_fluent() or fluent.is_action_fluent():
+                        raise ValueError(
+                            f"Expression is not an exogenous event: {expr}"
+                        )
+
+                shape = []
+
+                with self.graph.as_default():
+                    scope = self._scope.non_fluents(self.non_fluents)
+                    shape_fluent = self._compile_expression(args[0], scope, noise=None)
+                    scale_fluent = self._compile_expression(args[1], scope, noise=None)
+                    concentration = shape_fluent.tensor
+                    rate = 1 / scale_fluent.tensor
+                    dist = tf.distributions.Gamma(concentration, rate)
+
+                noise.append((dist, shape))
+
+                return shape
+
+            elif etype[1] == "Uniform":
                 low_shape = self._get_reparameterization(args[0], scope, noise)
                 high_shape = self._get_reparameterization(args[1], scope, noise)
                 shape = ReparameterizationCompiler._broadcast(low_shape, high_shape)
                 dist = tf.distributions.Uniform(low=0.0, high=1.0)
                 noise.append((dist, shape.as_list()))
                 return shape
-        elif etype[0] in ['arithmetic', 'boolean', 'relational']:
+        elif etype[0] in ["arithmetic", "boolean", "relational"]:
             op1_shape = self._get_reparameterization(args[0], scope, noise)
             shape = op1_shape
             if len(args) > 1:
                 op2_shape = self._get_reparameterization(args[1], scope, noise)
                 shape = ReparameterizationCompiler._broadcast(op1_shape, op2_shape)
             return shape
-        elif etype[0] == 'func':
+        elif etype[0] == "func":
             op1_shape = self._get_reparameterization(args[0], scope, noise)
             shape = op1_shape
             if len(args) > 1:
@@ -263,27 +282,29 @@ class ReparameterizationCompiler(DefaultCompiler):
                     op2_shape = self._get_reparameterization(args[1], scope, noise)
                     shape = ReparameterizationCompiler._broadcast(op1_shape, op2_shape)
                 else:
-                    raise ValueError('Invalid function:\n{}'.format(expr))
+                    raise ValueError("Invalid function:\n{}".format(expr))
             return shape
-        elif etype[0] == 'control':
-            if etype[1] == 'if':
+        elif etype[0] == "control":
+            if etype[1] == "if":
                 condition_shape = self._get_reparameterization(args[0], scope, noise)
                 true_case_shape = self._get_reparameterization(args[1], scope, noise)
                 false_case_shape = self._get_reparameterization(args[2], scope, noise)
-                shape = ReparameterizationCompiler._broadcast(condition_shape, true_case_shape)
+                shape = ReparameterizationCompiler._broadcast(
+                    condition_shape, true_case_shape
+                )
                 shape = ReparameterizationCompiler._broadcast(shape, false_case_shape)
                 return shape
             else:
-                raise ValueError('Invalid control flow expression:\n{}'.format(expr))
-        elif etype[0] == 'aggregation':
+                raise ValueError("Invalid control flow expression:\n{}".format(expr))
+        elif etype[0] == "aggregation":
             return self._get_reparameterization(args[-1], scope, noise)
 
-        raise ValueError('Expression type unknown: {}'.format(etype))
+        raise ValueError("Expression type unknown: {}".format(etype))
 
     @classmethod
-    def _broadcast(cls,
-            shape1: TensorFluentShape,
-            shape2: TensorFluentShape) -> TensorFluentShape:
+    def _broadcast(
+        cls, shape1: TensorFluentShape, shape2: TensorFluentShape
+    ) -> TensorFluentShape:
         s1, s2 = TensorFluentShape.broadcast(shape1, shape2)
         s1 = s1 if s1 is not None else shape1.as_list()
         s2 = s2 if s2 is not None else shape2.as_list()
