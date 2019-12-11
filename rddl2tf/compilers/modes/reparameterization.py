@@ -163,7 +163,7 @@ class ReparameterizationCompiler(DefaultCompiler):
             variance = self._compile_expression(args[1], scope, **kwargs)
             dist, sample = TensorFluent.Laplace(mean, variance, self.batch_size)
         elif etype[1] == "Gamma":
-            sample = noise.pop()
+            sample = TensorFluent(noise.pop(), scope=[], batch=True)
         elif etype[1] == "Exponential":
             xi = noise.pop()
             xi = TensorFluent(tf.sigmoid(xi), scope=[], batch=True)

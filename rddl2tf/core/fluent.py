@@ -63,6 +63,15 @@ class TensorFluent(object):
         '''Returns the tensor's name.'''
         return self.tensor.name
 
+    def __repr__(self):
+        '''Returns TensorFluent object representation.'''
+        return f"TensorFluent("     \
+            f"name={self.name}, "   \
+            f"scope={self.scope}, " \
+            f"batch={self.batch}, " \
+            f"dtype={self.dtype}, " \
+            f"shape={self.tensor.shape})"
+
     @classmethod
     def constant(cls,
             value: Value,
