@@ -4,7 +4,7 @@ rddl2tf package
 Submodules
 ----------
 
-rddl2tf.compiler module
+rddl2tf.compilers.compiler module
 -----------------------
 
 .. automodule:: rddl2tf.compiler
@@ -12,26 +12,26 @@ rddl2tf.compiler module
     :undoc-members:
     :show-inheritance:
 
-rddl2tf.fluent module
+rddl2tf.core.fluent module
 ---------------------
 
-.. automodule:: rddl2tf.fluent
+.. automodule:: rddl2tf.core.fluent
     :members:
     :undoc-members:
     :show-inheritance:
 
-rddl2tf.fluentscope module
+rddl2tf.core.fluentscope module
 --------------------------
 
-.. automodule:: rddl2tf.fluentscope
+.. automodule:: rddl2tf.core.fluentscope
     :members:
     :undoc-members:
     :show-inheritance:
 
-rddl2tf.fluentshape module
+rddl2tf.core.fluentshape module
 --------------------------
 
-.. automodule:: rddl2tf.fluentshape
+.. automodule:: rddl2tf.core.fluentshape
     :members:
     :undoc-members:
     :show-inheritance:

@@ -14,8 +14,8 @@
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
 
-from rddl2tf.fluentscope import TensorFluentScope
-from rddl2tf.fluentshape import TensorFluentShape
+from rddl2tf.core.fluentscope import TensorFluentScope
+from rddl2tf.core.fluentshape import TensorFluentShape
 
 import tensorflow as tf
 
@@ -39,8 +39,8 @@ class TensorFluent(object):
 
     Attributes:
         tensor (:obj:`tf.Tensor`): A tensor op representing the fluent in the graph.
-        scope (:obj:`rddl2tf.fluentscope.TensorFluentScope`): The argument scope of the fluent in the expression.
-        shape (:obj:`rddl2tf.fluentshape.TensorFluentShape`): The fluent shape and dimensions.
+        scope (:obj:`rddl2tf.core.fluentscope.TensorFluentScope`): The argument scope of the fluent in the expression.
+        shape (:obj:`rddl2tf.core.fluentshape.TensorFluentShape`): The fluent shape and dimensions.
     '''
 
     def __init__(self, tensor: tf.Tensor, scope: List[str], batch: bool = False) -> None:
@@ -62,6 +62,15 @@ class TensorFluent(object):
     def name(self) -> str:
         '''Returns the tensor's name.'''
         return self.tensor.name
+
+    def __repr__(self):
+        '''Returns TensorFluent object representation.'''
+        return f"TensorFluent("     \
+            f"name={self.name}, "   \
+            f"scope={self.scope}, " \
+            f"batch={self.batch}, " \
+            f"dtype={self.dtype}, " \
+            f"shape={self.tensor.shape})"
 
     @classmethod
     def constant(cls,

@@ -53,7 +53,7 @@ tensorboard --logdir /tmp/rddl2tf/simple_mars_rover/inst_simple_mars_rover_pics3
 ```python
 import rddlgym
 
-from rddl2tf.compiler import Compiler
+from rddl2tf.compilers.compiler import Compiler
 
 # parse and compile RDDL
 model_id = 'Reservoir-8'
