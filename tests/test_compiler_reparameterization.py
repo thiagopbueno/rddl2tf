@@ -22,7 +22,7 @@ import tensorflow as tf
 from pyrddl.expr import Expression
 import rddlgym
 
-from rddl2tf import ReparameterizationCompiler
+from rddl2tf.compilers import ReparameterizationCompiler
 from rddl2tf.core.fluent import TensorFluent
 from rddl2tf.core.fluentshape import TensorFluentShape
 
