@@ -1,6 +1,6 @@
 numpy
 tensorflow<2.0.0
-tensorflow-tensorboard
+tensorboard
 typing
 pyrddl
 rddlgym

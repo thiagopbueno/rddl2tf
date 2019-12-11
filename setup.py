@@ -44,7 +44,7 @@ setup(
         'pyrddl',
         'rddlgym',
         'tensorflow<2.0.0',
-        'tensorflow-tensorboard',
+        'tensorboard',
         'typing'
     ],
     include_package_data=True,
