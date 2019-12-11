@@ -14,9 +14,6 @@
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
 
-import rddl2tf
-from rddl2tf.version import __version__
-
 import os
 from setuptools import setup, find_packages
 
@@ -29,7 +26,7 @@ def read(filename):
 
 setup(
     name='rddl2tf',
-    version=__version__,
+    version=read('version.txt'),
     author='Thiago P. Bueno',
     author_email='thiago.pbueno@gmail.com',
     description='RDDL2TensorFlow compiler.',
