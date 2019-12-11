@@ -43,7 +43,7 @@ setup(
     install_requires=[
         'pyrddl',
         'rddlgym',
-        'tensorflow<2.0.0',
+        'tensorflow<3.0.0',
         'tensorboard',
         'typing'
     ],
