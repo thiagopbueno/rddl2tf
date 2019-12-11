@@ -1,3 +1,2 @@
-from rddl2tf.compilers.compiler import Compiler
-from rddl2tf.compilers.modes.default import DefaultCompiler
-from rddl2tf.compilers.modes.reparameterization import ReparameterizationCompiler
+__version__ = 'v0.5.9'
+__release__ = 'v0.5.9-alpha'
