@@ -34,6 +34,7 @@ setup(
     author_email='thiago.pbueno@gmail.com',
     description='RDDL2TensorFlow compiler.',
     long_description=read('README.md'),
+    long_description_content_type='text/markdown',
     license='GNU General Public License v3.0',
     keywords=['rddl', 'tensorflow'],
     url='https://github.com/thiagopbueno/rddl2tf',
