@@ -523,7 +523,7 @@ class Compiler(metaclass=abc.ABCMeta):
                                         **kwargs) -> TensorFluent:
         '''Compile a control flow expression `expr` into a TensorFluent
         in the given `scope`. The resulting TensorFluent will have
-        batch dimension given by `batch_size`.
+        batch dimension given by `batch_size`
 
         Args:
             expr (:obj:`rddl2tf.expr.Expression`): A RDDL control flow expression.

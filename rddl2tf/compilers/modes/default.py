@@ -37,7 +37,7 @@ class DefaultCompiler(Compiler):
         batch_size (int): The batch size of all compiled TensorFluent objects.
     '''
 
-    def __init__(self, rddl: RDDL, batch_size: Optional[int] = 128) -> None:
+    def __init__(self, rddl: RDDL, batch_size: Optional[int] = 1) -> None:
         super(DefaultCompiler, self).__init__(rddl, batch_size)
 
     def _compile_constant_expression(self,
