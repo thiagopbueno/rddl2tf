@@ -14,12 +14,13 @@
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
 
-from rddl2tf.core.fluentscope import TensorFluentScope
-from rddl2tf.core.fluentshape import TensorFluentShape
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from rddl2tf.core.fluentscope import TensorFluentScope
+from rddl2tf.core.fluentshape import TensorFluentShape
+
 
 Value = Union[bool, int, float]
 Distribution = tf.distributions.Distribution

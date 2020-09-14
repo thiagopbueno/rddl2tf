@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with rddl2tf. If not, see <http://www.gnu.org/licenses/>.
 
-import tensorflow as tf
 from typing import Dict, Optional
+import tensorflow as tf
 
 from pyrddl.rddl import RDDL
 from pyrddl.expr import Expression
