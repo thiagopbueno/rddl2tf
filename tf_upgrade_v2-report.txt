@@ -1,0 +1,295 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 23 files
+Detected 1 issues that require attention
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+File: rddl2tf/tests/test_compiler_reparameterization.py
+--------------------------------------------------------------------------------
+rddl2tf/tests/test_compiler_reparameterization.py:387:16: WARNING: tf.get_variable requires manual check. tf.get_variable returns ResourceVariables by default in 2.0, which have well-defined semantics and are stricter about shapes. You can disable this behavior by passing use_resource=False, or by calling tf.compat.v1.disable_resource_variables().
+================================================================================
+Detailed log follows:
+
+================================================================================
+================================================================================
+Input tree: 'rddl2tf'
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/setup.py'
+ outputting to 'rddl2tf_tf2/setup.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/tests/test_compilers_initializer.py'
+ outputting to 'rddl2tf_tf2/tests/test_compilers_initializer.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/tests/test_fluentshape.py'
+ outputting to 'rddl2tf_tf2/tests/test_fluentshape.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/tests/test_fluent.py'
+ outputting to 'rddl2tf_tf2/tests/test_fluent.py'
+--------------------------------------------------------------------------------
+
+29:8: INFO: Renamed 'tf.reset_default_graph' to 'tf.compat.v1.reset_default_graph'
+43:36: INFO: Renamed 'tf.distributions.Normal' to 'tf.compat.v1.distributions.Normal'
+52:12: INFO: Renamed 'tf.random_normal' to 'tf.random.normal'
+54:13: INFO: Renamed 'tf.random_normal' to 'tf.random.normal'
+56:12: INFO: Renamed 'tf.random_normal' to 'tf.random.normal'
+115:22: INFO: Renamed 'tf.random_normal' to 'tf.random.normal'
+117:22: INFO: Renamed 'tf.random_normal' to 'tf.random.normal'
+119:17: INFO: Renamed 'tf.random_normal' to 'tf.random.normal'
+150:16: INFO: Renamed 'tf.distributions.Bernoulli' to 'tf.compat.v1.distributions.Bernoulli'
+153:21: INFO: Renamed 'tf.random_uniform' to 'tf.random.uniform'
+166:15: INFO: Renamed 'tf.random_uniform' to 'tf.random.uniform'
+197:39: INFO: Added keywords to args of function 'tf.reduce_sum'
+198:38: INFO: Added keywords to args of function 'tf.reduce_sum'
+203:13: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+215:29: INFO: Renamed 'tf.distributions.Bernoulli' to 'tf.compat.v1.distributions.Bernoulli'
+221:39: INFO: Added keywords to args of function 'tf.reduce_sum'
+222:38: INFO: Added keywords to args of function 'tf.reduce_sum'
+227:13: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/tests/__init__.py'
+ outputting to 'rddl2tf_tf2/tests/__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/tests/test_fluentscope.py'
+ outputting to 'rddl2tf_tf2/tests/test_fluentscope.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/tests/test_compilers_scope.py'
+ outputting to 'rddl2tf_tf2/tests/test_compilers_scope.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/tests/test_compiler_default.py'
+ outputting to 'rddl2tf_tf2/tests/test_compiler_default.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/tests/test_compiler_reparameterization.py'
+ outputting to 'rddl2tf_tf2/tests/test_compiler_reparameterization.py'
+--------------------------------------------------------------------------------
+
+30:9: INFO: Renamed 'tf.distributions.Normal' to 'tf.compat.v1.distributions.Normal'
+31:8: INFO: Renamed 'tf.distributions.Gamma' to 'tf.compat.v1.distributions.Gamma'
+32:10: INFO: Renamed 'tf.distributions.Uniform' to 'tf.compat.v1.distributions.Uniform'
+101:38: INFO: Renamed 'tf.distributions.Normal' to 'tf.compat.v1.distributions.Normal'
+116:43: INFO: Renamed 'tf.distributions.Normal' to 'tf.compat.v1.distributions.Normal'
+385:13: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+387:16: WARNING: tf.get_variable requires manual check. tf.get_variable returns ResourceVariables by default in 2.0, which have well-defined semantics and are stricter about shapes. You can disable this behavior by passing use_resource=False, or by calling tf.compat.v1.disable_resource_variables().
+387:16: INFO: Renamed 'tf.get_variable' to 'tf.compat.v1.get_variable'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/docs/conf.py'
+ outputting to 'rddl2tf_tf2/docs/conf.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/__init__.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/utils.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/utils.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/core/fluentscope.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/core/fluentscope.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/core/fluentshape.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/core/fluentshape.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/core/__init__.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/core/__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/core/fluent.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/core/fluent.py'
+--------------------------------------------------------------------------------
+
+26:15: INFO: Renamed 'tf.distributions.Distribution' to 'tf.compat.v1.distributions.Distribution'
+108:15: INFO: Renamed 'tf.distributions.Bernoulli' to 'tf.compat.v1.distributions.Bernoulli'
+137:15: INFO: Renamed 'tf.distributions.Uniform' to 'tf.compat.v1.distributions.Uniform'
+168:15: INFO: Renamed 'tf.distributions.Normal' to 'tf.compat.v1.distributions.Normal'
+199:15: INFO: Renamed 'tf.distributions.Laplace' to 'tf.compat.v1.distributions.Laplace'
+231:15: INFO: Renamed 'tf.distributions.Gamma' to 'tf.compat.v1.distributions.Gamma'
+255:15: INFO: Renamed 'tf.distributions.Exponential' to 'tf.compat.v1.distributions.Exponential'
+292:17: INFO: Renamed 'tf.where' to 'tf.compat.v1.where'
+329:32: INFO: Renamed 'tf.log' to 'tf.math.log'
+437:32: INFO: Renamed 'tf.ceil' to 'tf.math.ceil'
+673:12: INFO: Added keywords to args of function 'tf.transpose'
+857:44: INFO: Renamed 'tf.logical_xor' to 'tf.math.logical_xor'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/compilers/compiler.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/compilers/compiler.py'
+--------------------------------------------------------------------------------
+
+70:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+70:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+80:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+80:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+123:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+123:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+141:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+141:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+162:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+162:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+181:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+181:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+205:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+205:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+213:29: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+213:29: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+219:29: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+219:29: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+252:21: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+252:21: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+290:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+290:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+295:25: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+295:25: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+317:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+317:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+322:25: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+322:25: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+344:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+344:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/compilers/__init__.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/compilers/__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/compilers/initializer.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/compilers/initializer.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/compilers/scope.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/compilers/scope.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/compilers/modes/__init__.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/compilers/modes/__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/compilers/modes/default.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/compilers/modes/default.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'rddl2tf/rddl2tf/compilers/modes/reparameterization.py'
+ outputting to 'rddl2tf_tf2/rddl2tf/compilers/modes/reparameterization.py'
+--------------------------------------------------------------------------------
+
+33:14: INFO: Renamed 'tf.distributions.Distribution' to 'tf.compat.v1.distributions.Distribution'
+72:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+72:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+78:25: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+78:25: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+103:17: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+103:17: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+109:25: INFO: `name` passed to `name_scope`. Because you may be re-entering an existing scope, it is not safe to convert automatically,  the v2 name_scope does not support re-entering scopes by name.
+
+109:25: INFO: Renamed 'tf.name_scope' to 'tf.compat.v1.name_scope'
+233:23: INFO: Renamed 'tf.distributions.Normal' to 'tf.compat.v1.distributions.Normal'
+238:23: INFO: Renamed 'tf.distributions.Uniform' to 'tf.compat.v1.distributions.Uniform'
+257:27: INFO: Renamed 'tf.distributions.Gamma' to 'tf.compat.v1.distributions.Gamma'
+267:23: INFO: Renamed 'tf.distributions.Uniform' to 'tf.compat.v1.distributions.Uniform'
+--------------------------------------------------------------------------------
+
