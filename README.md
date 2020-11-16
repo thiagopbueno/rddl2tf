@@ -89,17 +89,14 @@ reward = compiler.compile_reward(scope)
 
 ## Core API methods
 
-- `rddl2tf.Compiler.compile_initial_state`
-- `rddl2tf.Compiler.compile_default_action`
-- `rddl2tf.Compiler.compile_cpfs`
-- `rddl2tf.Compiler.compile_intermediate_cpfs`
-- `rddl2tf.Compiler.compile_state_cpfs`
-- `rddl2tf.Compiler.compile_reward`
-- `rddl2tf.Compiler.compile_state_action_constraints`
-- `rddl2tf.Compiler.compile_action_preconditions`
-- `rddl2tf.Compiler.compile_state_invariants`
-- `rddl2tf.Compiler.compile_action_preconditions_checking`
-- `rddl2tf.Compiler.compile_action_bound_constraints`
+- `rddl2tf.Compiler.initial_state`
+- `rddl2tf.Compiler.default_action`
+- `rddl2tf.Compiler.cpfs`
+- `rddl2tf.Compiler.reward`
+- `rddl2tf.Compiler.state_action_constraints`
+- `rddl2tf.Compiler.action_preconditions`
+- `rddl2tf.Compiler.state_invariants`
+- `rddl2tf.Compiler.action_bound_constraints`
 
 
 ## Parameterized Variables (pvariables)
@@ -134,7 +131,7 @@ If you are having issues with ``rddl2tf``, please let me know at: [thiago.pbueno
 
 # License
 
-Copyright (c) 2018-2019 Thiago Pereira Bueno All Rights Reserved.
+Copyright (c) 2018-2020 Thiago Pereira Bueno All Rights Reserved.
 
 rddl2tf is free software: you can redistribute it and/or modify it
 under the terms of the GNU Lesser General Public License as published by
