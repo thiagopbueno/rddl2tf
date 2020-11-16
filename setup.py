@@ -44,6 +44,7 @@ setup(
         'tensorflow<2.0.0',
         'typing',
         'pyrddl',
+        'rddlgym'
     ],
     include_package_data=True,
     zip_safe=False,
@@ -54,7 +55,7 @@ setup(
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Artificial Intelligence'
     ],
 )
