@@ -53,35 +53,38 @@ tensorboard --logdir /tmp/rddl2tf/simple_mars_rover/inst_simple_mars_rover_pics3
 ```python
 import rddlgym
 
-from rddl2tf.compilers.compiler import Compiler
+from rddl2tf.compilers import DefaultCompiler
 
-# parse and compile RDDL
+
+# parse RDDL into an AST
 model_id = 'Reservoir-8'
 model = rddlgym.make(model_id, mode=rddlgym.AST)
-compiler = Compiler(model)
 
-# set batch mode
-compiler.batch_mode_on()
-batch_size = 256
+# create a RDDL-to-TF compiler
+compiler = DefaultCompiler(model, batch_size=256)
+compiler.init()
 
 # compile initial state and default action fluents
-state = compiler.compile_initial_state(batch_size)
-action = compiler.compile_default_action(batch_size)
+state = compiler.initial_state()
+action = compiler.default_action()
 
 # compile state invariants and action preconditions
-invariants = compiler.compile_state_invariants(state)
-preconditions = compiler.compile_action_preconditions(state, action)
+invariants = compiler.state_invariants(state)
+preconditions = compiler.action_preconditions(state, action)
 
 # compile action bounds
-bounds = compiler.compile_action_bound_constraints(state)
+bounds = compiler.action_bound_constraints(state)
 
 # compile intermediate fluents and next state fluents
-scope = compiler.transition_scope(state, action)
-interms, next_state = compiler.compile_cpfs(scope, batch_size)
+interms, next_state = compiler.cpfs(state, action)
 
 # compile reward function
-scope.update(next_state)
-reward = compiler.compile_reward(scope)
+reward = compiler.reward(state, action, next_state)
+
+# save and visualize the computation graph
+logdir = os.path.join(args.logdir, model.domain.name, model.instance.name)
+file_writer = tf.summary.FileWriter(logdir, compiler.graph)
+print('tensorboard --logdir {}\n'.format(logdir))
 ```
 
 
