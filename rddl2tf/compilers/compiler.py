@@ -67,7 +67,7 @@ class Compiler(metaclass=abc.ABCMeta):
             Sequence[tf.Tensor]: A tuple of tensors.
         '''
         with self.graph.as_default():
-            with tf.name_scope('initial_state'):
+            with tf.compat.v1.name_scope('initial_state'):
                 return self._compile_batch_fluents(self.initial_state_fluents)
 
     def default_action(self) -> Sequence[tf.Tensor]:
@@ -77,7 +77,7 @@ class Compiler(metaclass=abc.ABCMeta):
             Sequence[tf.Tensor]: A tuple of tensors.
         '''
         with self.graph.as_default():
-            with tf.name_scope('default_action'):
+            with tf.compat.v1.name_scope('default_action'):
                 return self._compile_batch_fluents(self.default_action_fluents)
 
     def cpfs(self,
@@ -120,7 +120,7 @@ class Compiler(metaclass=abc.ABCMeta):
         scope = self._scope.reward(self.non_fluents, state, action, next_state)
         r = self._compile_reward(scope, **kwargs).tensor
         with self.graph.as_default():
-            with tf.name_scope('reward'):
+            with tf.compat.v1.name_scope('reward'):
                 return tf.expand_dims(r, -1)
 
     def state_action_constraints(self,
@@ -138,7 +138,7 @@ class Compiler(metaclass=abc.ABCMeta):
         scope = self._scope.transition(self.non_fluents, state, action)
         constraints = []
         with self.graph.as_default():
-            with tf.name_scope('state_action_constraints'):
+            with tf.compat.v1.name_scope('state_action_constraints'):
                 for p in self.rddl.domain.constraints:
                     fluent = self._compile_expression(p, scope)
                     constraints.append(fluent)
@@ -159,7 +159,7 @@ class Compiler(metaclass=abc.ABCMeta):
         scope = self._scope.action_precondition(self.non_fluents, state, action)
         preconds = []
         with self.graph.as_default():
-            with tf.name_scope('action_preconditions'):
+            with tf.compat.v1.name_scope('action_preconditions'):
                 for p in self.rddl.domain.preconds:
                     fluent = self._compile_expression(p, scope)
                     preconds.append(fluent)
@@ -178,7 +178,7 @@ class Compiler(metaclass=abc.ABCMeta):
         scope = self._scope.state_invariant(self.non_fluents, state)
         invariants = []
         with self.graph.as_default():
-            with tf.name_scope('state_invariants'):
+            with tf.compat.v1.name_scope('state_invariants'):
                 for p in self.rddl.domain.invariants:
                     fluent = self._compile_expression(p, scope)
                     invariants.append(fluent)
@@ -202,7 +202,7 @@ class Compiler(metaclass=abc.ABCMeta):
         upper_bounds = self.rddl.domain.action_upper_bound_constraints
 
         with self.graph.as_default():
-            with tf.name_scope('action_bound_constraints'):
+            with tf.compat.v1.name_scope('action_bound_constraints'):
 
                 bounds = {}
                 for name in self.rddl.domain.action_fluent_ordering:
@@ -210,13 +210,13 @@ class Compiler(metaclass=abc.ABCMeta):
                     lower_expr = lower_bounds.get(name)
                     lower = None
                     if lower_expr is not None:
-                        with tf.name_scope('lower_bound'):
+                        with tf.compat.v1.name_scope('lower_bound'):
                             lower = self._compile_expression(lower_expr, scope)
 
                     upper_expr = upper_bounds.get(name)
                     upper = None
                     if upper_expr is not None:
-                        with tf.name_scope('upper_bound'):
+                        with tf.compat.v1.name_scope('upper_bound'):
                             upper = self._compile_expression(upper_expr, scope)
 
                     bounds[name] = (lower, upper)
@@ -249,7 +249,7 @@ class Compiler(metaclass=abc.ABCMeta):
         with self.graph.as_default():
             for name, fluent in fluents:
                 name_scope = utils.identifier(name)
-                with tf.name_scope(name_scope):
+                with tf.compat.v1.name_scope(name_scope):
                     t = tf.stack([fluent.tensor] * self.batch_size)
                 batch_fluents.append(t)
         return tuple(batch_fluents)
@@ -287,12 +287,12 @@ class Compiler(metaclass=abc.ABCMeta):
         interm_fluents = []
 
         with self.graph.as_default():
-            with tf.name_scope('intermediate_cpfs'):
+            with tf.compat.v1.name_scope('intermediate_cpfs'):
 
                 for cpf in self.rddl.domain.intermediate_cpfs:
                     name_scope = utils.identifier(cpf.name)
 
-                    with tf.name_scope(name_scope):
+                    with tf.compat.v1.name_scope(name_scope):
                         t = self._compile_expression(cpf.expr, scope, **kwargs)
                         interm_fluents.append((cpf.name, t))
                         scope[cpf.name] = t
@@ -314,12 +314,12 @@ class Compiler(metaclass=abc.ABCMeta):
         next_state_fluents = []
 
         with self.graph.as_default():
-            with tf.name_scope('state_cpfs'):
+            with tf.compat.v1.name_scope('state_cpfs'):
 
                 for cpf in self.rddl.domain.state_cpfs:
                     name_scope = utils.identifier(cpf.name)
 
-                    with tf.name_scope(name_scope):
+                    with tf.compat.v1.name_scope(name_scope):
                         t = self._compile_expression(cpf.expr, scope, **kwargs)
                         next_state_fluents.append((cpf.name, t))
 
@@ -341,7 +341,7 @@ class Compiler(metaclass=abc.ABCMeta):
         '''
         reward_expr = self.rddl.domain.reward
         with self.graph.as_default():
-            with tf.name_scope('reward'):
+            with tf.compat.v1.name_scope('reward'):
                 return self._compile_expression(reward_expr, scope, **kwargs)
 
     def _compile_expression(self,

@@ -27,9 +27,9 @@ from rddl2tf.core.fluent import TensorFluent
 from rddl2tf.core.fluentshape import TensorFluentShape
 
 
-NORMAL = tf.distributions.Normal
-GAMMA = tf.distributions.Gamma
-UNIFORM = tf.distributions.Uniform
+NORMAL = tf.compat.v1.distributions.Normal
+GAMMA = tf.compat.v1.distributions.Gamma
+UNIFORM = tf.compat.v1.distributions.Uniform
 
 
 ZERO = Expression(("number", 0.0))
@@ -98,7 +98,7 @@ def test_get_state_cpfs_reparameterization(compiler):
 
     if compiler.rddl.domain.name == "Navigation":
         _test_cpf_reparameterization_dist(
-            noise, [("location'/1", [(tf.distributions.Normal, [2])])]
+            noise, [("location'/1", [(tf.compat.v1.distributions.Normal, [2])])]
         )
 
 
@@ -113,7 +113,7 @@ def test_get_intermediate_cpfs_reparameterization(compiler):
 
 def test_standard_normal(compiler):
     noise = compiler._get_expression_reparameterization(Z, scope={})
-    _test_reparameterization_dist(noise, [(tf.distributions.Normal, [1])])
+    _test_reparameterization_dist(noise, [(tf.compat.v1.distributions.Normal, [1])])
     _test_reparameterized_expression(compiler, Z, scope={}, noise=noise, name="noise")
 
 
@@ -382,9 +382,9 @@ def _test_reparameterization_dist(noise, reparam_map):
 
 def _test_reparameterized_expression(compiler, expr, scope, noise, name):
     with compiler.graph.as_default():
-        with tf.variable_scope(name):
+        with tf.compat.v1.variable_scope(name):
             noise = [
-                tf.get_variable("noise_{}".format(i), shape=shape)
+                tf.compat.v1.get_variable("noise_{}".format(i), shape=shape)
                 for i, (_, shape) in enumerate(noise)
             ]
             fluent = compiler._compile_expression(

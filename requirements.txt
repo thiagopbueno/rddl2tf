@@ -1,6 +1,4 @@
 numpy
-tensorflow<2.0.0
+tensorflow>=2.0
 tensorboard
 typing
-pyrddl
-rddlgym

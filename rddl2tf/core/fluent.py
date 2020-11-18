@@ -23,7 +23,7 @@ from rddl2tf.core.fluentshape import TensorFluentShape
 
 
 Value = Union[bool, int, float]
-Distribution = tf.distributions.Distribution
+Distribution = tf.compat.v1.distributions.Distribution
 
 
 class TensorFluent(object):
@@ -105,7 +105,7 @@ class TensorFluent(object):
             The Bernoulli distribution and a TensorFluent sample drawn from the distribution.
         '''
         probs = mean.tensor
-        dist = tf.distributions.Bernoulli(probs=probs, dtype=tf.bool)
+        dist = tf.compat.v1.distributions.Bernoulli(probs=probs, dtype=tf.bool)
         batch = mean.batch
         if not batch and batch_size is not None:
             t = dist.sample(batch_size)
@@ -134,7 +134,7 @@ class TensorFluent(object):
         '''
         if low.scope != high.scope:
             raise ValueError('Uniform distribution: parameters must have same scope!')
-        dist = tf.distributions.Uniform(low.tensor, high.tensor)
+        dist = tf.compat.v1.distributions.Uniform(low.tensor, high.tensor)
         batch = low.batch or high.batch
         if not batch and batch_size is not None:
             t = dist.sample(batch_size)
@@ -165,7 +165,7 @@ class TensorFluent(object):
             raise ValueError('Normal distribution: parameters must have same scope!')
         loc = mean.tensor
         scale = tf.sqrt(variance.tensor)
-        dist = tf.distributions.Normal(loc, scale)
+        dist = tf.compat.v1.distributions.Normal(loc, scale)
         batch = mean.batch or variance.batch
         if not batch and batch_size is not None:
             t = dist.sample(batch_size)
@@ -196,7 +196,7 @@ class TensorFluent(object):
             raise ValueError('Laplace distribution: parameters must have same scope!')
         loc = mean.tensor
         scale = tf.sqrt(variance.tensor / 2.0)
-        dist = tf.distributions.Laplace(loc, scale)
+        dist = tf.compat.v1.distributions.Laplace(loc, scale)
         batch = mean.batch or variance.batch
         if not batch and batch_size is not None:
             t = dist.sample(batch_size)
@@ -228,7 +228,7 @@ class TensorFluent(object):
             raise ValueError('Gamma distribution: parameters must have same scope!')
         concentration = shape.tensor
         rate = 1 / scale.tensor
-        dist = tf.distributions.Gamma(concentration, rate)
+        dist = tf.compat.v1.distributions.Gamma(concentration, rate)
         batch = shape.batch or scale.batch
         if not batch and batch_size is not None:
             t = dist.sample(batch_size)
@@ -252,7 +252,7 @@ class TensorFluent(object):
             The Exponential distribution and a TensorFluent sample drawn from the distribution.
         '''
         rate = 1 / mean.tensor
-        dist = tf.distributions.Exponential(rate)
+        dist = tf.compat.v1.distributions.Exponential(rate)
         batch = mean.batch
         if not batch and batch_size is not None:
             t = dist.sample(batch_size)
@@ -289,7 +289,7 @@ class TensorFluent(object):
         '''
         scope = x.scope.as_list()
         batch = x.batch
-        tensor = tf.where(stop_batch, tf.stop_gradient(x.tensor), x.tensor)
+        tensor = tf.compat.v1.where(stop_batch, tf.stop_gradient(x.tensor), x.tensor)
         return TensorFluent(tensor, scope, batch)
 
     @classmethod
@@ -326,7 +326,7 @@ class TensorFluent(object):
         Returns:
             A TensorFluent wrapping the log function.
         '''
-        return cls._unary_op(x, tf.log, tf.float32)
+        return cls._unary_op(x, tf.math.log, tf.float32)
 
     @classmethod
     def sqrt(cls, x: 'TensorFluent') -> 'TensorFluent':
@@ -434,7 +434,7 @@ class TensorFluent(object):
         Returns:
             A TensorFluent wrapping the ceil function.
         '''
-        return cls._unary_op(x, tf.ceil, tf.float32)
+        return cls._unary_op(x, tf.math.ceil, tf.float32)
 
     @classmethod
     def floor(cls, x: 'TensorFluent') -> 'TensorFluent':
@@ -670,7 +670,7 @@ class TensorFluent(object):
         '''
         if permutation == []:
             return self
-        t = tf.transpose(self.tensor, permutation) if permutation != [] else self.tensor
+        t = tf.transpose(a=self.tensor, perm=permutation) if permutation != [] else self.tensor
         scope = self.scope.as_list()
         batch = self.batch
         return TensorFluent(t, scope, batch=batch)
@@ -854,7 +854,7 @@ class TensorFluent(object):
         Returns:
             A TensorFluent wrapping the operator's output.
         '''
-        return self._binary_op(self, other, tf.logical_xor, tf.bool)
+        return self._binary_op(self, other, tf.math.logical_xor, tf.bool)
 
     def __invert__(self) -> 'TensorFluent':
         '''Returns a TensorFluent for the not logical operator.
